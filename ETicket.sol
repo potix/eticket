@@ -1,8 +1,9 @@
 pragma solidity ^0.4.11;
 
 import "./StandardToken.sol";
+import "ownership/Ownable.sol";
 
-contract ETicket is StandardToken {
+contract ETicket is StandardToken, Ownable {
     string public name = "ETicketToken"; 
     string public symbol = "ETT";
     uint public decimals = 18;
@@ -12,4 +13,6 @@ contract ETicket is StandardToken {
         totalSupply = INITIAL_SUPPLY;
         balances[msg.sender] = INITIAL_SUPPLY;
     }
+    
+    
 }
