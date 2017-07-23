@@ -15,7 +15,7 @@ contract ETicket is StandardToken, Ownable {
     }
 
     // publich ticket
-    struct publishEventTicker {
+    struct publishEventTicket {
         uint ticketId;
         uint ticketSerialNumber;
         uint discard;
@@ -29,13 +29,16 @@ contract ETicket is StandardToken, Ownable {
         uint lastTicketIndex;
         uint discard;
     }
-    mapping (address => mapping(uint => mapping(uint => publichEventTicketGroup))) publishEventTicketGroups;
+    mapping (address => mapping(uint => mapping(uint => publishEventTicketGroup))) publishEventTicketGroups;
 
     // publich event
     struct publishEvent {
+        address publisher;
         uint eventId;
+        uint publishTime;
         string name;
         string description;
+        string tag;
         uint startTime;
         uint endTime;
         string place;
@@ -44,31 +47,46 @@ contract ETicket is StandardToken, Ownable {
         uint   lastTicketSerialNumber;
         uint   stop;
     }
-    mapping (address => mapping(uint => evnt)) publishEvents;
+    mapping (address => mapping(uint => publishEvent)) publishEvents;
 
     // ticket
-    struct ticker {
+    struct ticket {
         address publisher;
         uint eventId;
         uint ticketGroupId;
         uint ticketId;
         uint price;
         uint owner;
+        bytes commemoration;
     }
-    mapping (address => mapping(uint => Ticket)) Tickets;
+    mapping (address => mapping(uint => ticket)) tickers;
 
     // user 
     struct user {
         string name;
         string email;
+        string description;
         uint   lastEventsIndex;
         uint   lastTicketsIndex;
     }
     mapping (address => user) users;
 
+    // search for event
+    struct eventForSearch {
+        uint eventForSearchId;
+        address publisher;
+        uint eventId;
+    }
+    mapping (uint => eventForSearch) eventsForSearch;
+    uint lastEventForSearchIndex;
+
 
 
     // user operation
+    function GetUser() {
+        
+    }
+
     function CreateUser() {
         
     }
@@ -78,38 +96,66 @@ contract ETicket is StandardToken, Ownable {
     }
 
 
-
-    // event operation
-    function CreateEvent() {
-        
-    }
-
-    function ModifyEvent() {
-        
-    }
-
-    function StopEvent() {
+    // search operation
+    function SearchEvent() {
         
     }
 
 
-
-    // event ticket
-    function CreateTicket() {
+    // ticket operation
+    function BuyTicket() {
         
     }
 
-    function DiscardTicketGroup() {
+    function SellTicket() {
         
     }
 
-    function DiscardTicket() {
+    function CancelTicket() {
         
     }
 
 
+    // enter operation
+    function enter() {
+        
+    }
 
- 
- 
+
+    // publish event operation
+    function GetPublishEvent() {
+        
+    }
+    
+    function CreatePublishEvent() {
+        
+    }
+
+    function ModifyPublishEvent() {
+        
+    }
+
+    function StopPublishEvent() {
+        
+    }
+
+
+    // publish ticket operation
+    function GetPublishEventTicket() {
+        
+    }
+
+    function CreatePublishEventTicket() {
+        
+    }
+
+    function DiscardPublishEventTicketGroup() {
+        
+    }
+
+    function DiscardPublichEventTicket() {
+        
+    }
     
 }
+
