@@ -56,10 +56,10 @@ contract ETicket is StandardToken, Ownable {
         uint ticketGroupId;
         uint ticketId;
         uint price;
-        uint owner;
+        address owner;
         bytes commemoration;
     }
-    mapping (address => mapping(uint => ticket)) tickers;
+    mapping (address => ticket[]) tickers;
 
     // user 
     struct user {
@@ -67,7 +67,6 @@ contract ETicket is StandardToken, Ownable {
         string email;
         string description;
         uint   lastEventsIndex;
-        uint   lastTicketsIndex;
     }
     mapping (address => user) users;
 
@@ -83,16 +82,35 @@ contract ETicket is StandardToken, Ownable {
 
 
     // user operation
-    function GetUser() {
-        
+    function GetUser() returns (string name, string email, string description){
+        require(bytes(users[msg.sender].name).length != 0);
+        name = users[msg.sender].name;
+        email = users[msg.sender].email;
+        description = users[msg.sender].description;
     }
 
-    function CreateUser() {
-        
+    function GetUserByAddress(address userAddress) returns (string name, string email, string description){
+        require(bytes(users[userAddress].name).length != 0);
+        name = users[userAddress].name;
+        email = users[userAddress].email;
+        description = users[userAddress].description;
     }
 
-    function ModifytUser() {
-        
+    function CreateUser(string name, string email, string description) {
+        require(bytes(name).length != 0);
+        users[msg.sender] = user({ 
+            name : name, 
+            email : email, 
+            description : description,
+            lastEventsIndex: 0
+        });       
+    }
+
+    function ModifyUser(string name, string email, string description) {
+        require(bytes(users[msg.sender].name).length != 0);
+        users[msg.sender].name = name; 
+        users[msg.sender].email = email; 
+        users[msg.sender].description = description; 
     }
 
 
@@ -103,6 +121,10 @@ contract ETicket is StandardToken, Ownable {
 
 
     // ticket operation
+    function GetTickets() {
+        
+    }
+    
     function BuyTicket() {
         
     }
