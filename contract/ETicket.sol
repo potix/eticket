@@ -2,8 +2,11 @@ pragma solidity ^0.4.11;
 
 import "./StandardToken.sol";
 import "./Ownable.sol";
+import "./Strings.sol";
 
 contract ETicket is StandardToken, Ownable {
+    using strings for *;
+    
     string public name = "ETicketToken"; 
     string public symbol = "ETT";
     uint public decimals = 18;
@@ -26,26 +29,19 @@ contract ETicket is StandardToken, Ownable {
     // publich ticket group
     struct publishEventTicketGroup {
         uint ticketGroupId;
-        uint lastTicketIndex;
+        uint lastTicketId;
         uint discard;
     }
     mapping (address => mapping(uint => mapping(uint => publishEventTicketGroup))) publishEventTicketGroups;
 
     // publich event
     struct publishEvent {
-        address publisher;
         uint eventId;
         uint publishTime;
-        string name;
-        string description;
-        string tag;
-        uint startTime;
-        uint endTime;
-        string place;
-        string mapUrl;
-        uint   lastTicketGroupsIndex;
+        string attributes;
+        bool   stop;
+        uint   lastTicketGroupId;
         uint   lastTicketSerialNumber;
-        uint   stop;
     }
     mapping (address => mapping(uint => publishEvent)) publishEvents;
 
@@ -56,6 +52,7 @@ contract ETicket is StandardToken, Ownable {
         uint ticketGroupId;
         uint ticketId;
         uint price;
+        bool sale;
         address owner;
         bytes commemoration;
     }
@@ -63,12 +60,11 @@ contract ETicket is StandardToken, Ownable {
 
     // user 
     struct user {
-        string name;
-        string email;
-        string description;
-        uint   lastEventsIndex;
+        string attributes;
+        uint   lastEventId;
     }
     mapping (address => user) users;
+    mapping (address => mapping(string => string)) usersAttributes;
 
     // search for event
     struct eventForSearch {
@@ -77,40 +73,48 @@ contract ETicket is StandardToken, Ownable {
         uint eventId;
     }
     mapping (uint => eventForSearch) eventsForSearch;
-    uint lastEventForSearchIndex;
-
-
+    uint lastEventForSearchId;
 
     // user operation
-    function GetUser() returns (string name, string email, string description){
-        require(bytes(users[msg.sender].name).length != 0);
-        name = users[msg.sender].name;
-        email = users[msg.sender].email;
-        description = users[msg.sender].description;
+    function GetUser() returns (string attributes){
+        require(bytes(users[msg.sender].attributes).length != 0);
+        attributes = users[msg.sender].attributes;
     }
 
-    function GetUserByAddress(address userAddress) returns (string name, string email, string description){
-        require(bytes(users[userAddress].name).length != 0);
-        name = users[userAddress].name;
-        email = users[userAddress].email;
-        description = users[userAddress].description;
+    function GetUserByAddress(address userAddress) returns (string attributes) {
+        require(bytes(users[userAddress].attributes).length != 0);
+        attributes = users[userAddress].attributes;
     }
 
     function CreateUser(string name, string email, string description) {
-        require(bytes(name).length != 0);
+        require(bytes(name).length != 0 && bytes(email).length != 0);
+
+        var attrs = "".toSlice();
+        attrs.concat("name:".toSlice());
+        attrs.concat(name.toSlice());
+        attrs.concat(", email:".toSlice());
+        attrs.concat(email.toSlice());
+        attrs.concat(", description:".toSlice());
+        attrs.concat(description.toSlice());
+        
         users[msg.sender] = user({ 
-            name : name, 
-            email : email, 
-            description : description,
-            lastEventsIndex: 0
-        });       
+            attributes: attrs.toString(),
+            lastEventId: 0
+        });
     }
 
     function ModifyUser(string name, string email, string description) {
-        require(bytes(users[msg.sender].name).length != 0);
-        users[msg.sender].name = name; 
-        users[msg.sender].email = email; 
-        users[msg.sender].description = description; 
+        require(bytes(users[msg.sender].attributes).length != 0);
+
+        var attrs = "".toSlice();
+        attrs.concat("name:".toSlice());
+        attrs.concat(name.toSlice());
+        attrs.concat(", email:".toSlice());
+        attrs.concat(email.toSlice());
+        attrs.concat(", description:".toSlice());
+        attrs.concat(description.toSlice());
+
+        users[msg.sender].attributes = attrs.toString(); 
     }
 
 
@@ -153,8 +157,44 @@ contract ETicket is StandardToken, Ownable {
         
     }
     
-    function CreatePublishEvent() {
+    function CreatePublishEvent(string name, string description, string tags, string startTime, string endTime, string place, string mapLink) {
+        require(bytes(name).length != 0);
         
+        // for user
+        strings.slice memory attrs = "".toSlice();
+        attrs.concat("name:".toSlice());
+        attrs.concat(name.toSlice());
+        attrs.concat(", description:".toSlice());
+        attrs.concat(description.toSlice());
+        attrs.concat(", tags:".toSlice());
+        attrs.concat(tags.toSlice());
+        attrs.concat(", startTime:".toSlice());
+        attrs.concat(startTime.toSlice());
+        attrs.concat(", endTime:".toSlice());
+        attrs.concat(endTime.toSlice());
+        attrs.concat(", place:".toSlice());
+        attrs.concat(place.toSlice());
+        attrs.concat(", mapLink:".toSlice());
+        attrs.concat(mapLink.toSlice());
+        var user = users[msg.sender];
+        var eventId = user.lastEventId;
+        publishEvents[msg.sender][user.lastEventId] = publishEvent ({
+            eventId: eventId,
+            publishTime: block.timestamp,
+            attributes: attrs.toString(), 
+            stop: false,
+            lastTicketGroupId: 0,
+            lastTicketSerialNumber: 0
+        });
+        user.lastEventId++;
+
+        // for search
+        eventsForSearch[lastEventForSearchId] = eventForSearch({
+            eventForSearchId: lastEventForSearchId,
+            publisher: msg.sender,
+            eventId: eventId
+        });
+
     }
 
     function ModifyPublishEvent() {
@@ -166,7 +206,7 @@ contract ETicket is StandardToken, Ownable {
     }
 
 
-    // publish ticket operation
+    // publish event ticket operation
     function GetPublishEventTicket() {
         
     }
@@ -184,4 +224,5 @@ contract ETicket is StandardToken, Ownable {
     }
     
 }
+
 
