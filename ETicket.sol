@@ -133,6 +133,10 @@ contract ETicket is StandardToken, Ownable {
         
     }
 
+    function TransferTicket() {
+        
+    }
+
     function CancelTicket() {
         
     }
