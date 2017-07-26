@@ -2,6 +2,7 @@ pragma solidity ^0.4.11;
 
 import "./StandardToken.sol";
 import "./Ownable.sol";
+//import "./Strings.sol";
 
 contract ETicket is StandardToken, Ownable {
     //using strings for *;
@@ -75,13 +76,13 @@ contract ETicket is StandardToken, Ownable {
     uint lastUserId;
 
     // search for event
-    struct eventForSearch {
-        uint eventForSearchId;
-        address publisher;
+    struct eventSearch {
+        uint eventSearchId;
+        uint userId;
         uint eventId;
     }
-    mapping (uint => eventForSearch) eventsForSearch;
-    uint lastEventForSearchId;
+    mapping (uint => eventSearch) eventsSearch;
+    uint lastEventSearchId;
 
     // user operation
     function GetUser() returns (string name, string email, string description){
@@ -118,14 +119,22 @@ contract ETicket is StandardToken, Ownable {
         users[msg.sender].description = description; 
     }
 
-
     // search operation
-    function findEventForSearch() {
-        
+    function getLastEventSearchId() returns (uint) {
+        return lastEventSearchId; 
     }
     
-    function getEventForSearch() {
-        
+    function getEventSearch(uint eventSearchId) returns  (string name, string description, string tags, string startDateTime, string endDateTime, string place, string mapLink) {
+        require(bytes(publishEvents[eventsSearch[eventSearchId].userId][eventsSearch[eventSearchId].eventId].name).length != 0);
+        var userId = eventsSearch[eventSearchId].userId;
+        var eventId = eventsSearch[eventSearchId].eventId;
+        name = publishEvents[userId][eventId].name;
+        description = publishEvents[userId][eventId].description;
+        tags = publishEvents[userId][eventId].tags;
+        startDateTime = publishEvents[userId][eventId].startDateTime;
+        endDateTime = publishEvents[userId][eventId].endDateTime;
+        place = publishEvents[userId][eventId].place;
+        mapLink = publishEvents[userId][eventId].mapLink;
     }
 
 
@@ -161,20 +170,22 @@ contract ETicket is StandardToken, Ownable {
     function GetPublishEvent(uint eventId) returns (string name, string description, string tags, string startDateTime, string endDateTime, string place, string mapLink) {
         require(bytes(users[msg.sender].name).length != 0);
         require(bytes(publishEvents[users[msg.sender].userId][eventId].name).length != 0);
-        name = publishEvents[users[msg.sender].userId][eventId].name;
-        description = publishEvents[users[msg.sender].userId][eventId].description;
-        tags = publishEvents[users[msg.sender].userId][eventId].tags;
-        startDateTime = publishEvents[users[msg.sender].userId][eventId].startDateTime;
-        endDateTime = publishEvents[users[msg.sender].userId][eventId].endDateTime;
-        place = publishEvents[users[msg.sender].userId][eventId].place;
-        mapLink = publishEvents[users[msg.sender].userId][eventId].mapLink;
+        var userId = users[msg.sender].userId;
+        name = publishEvents[userId][eventId].name;
+        description = publishEvents[userId][eventId].description;
+        tags = publishEvents[userId][eventId].tags;
+        startDateTime = publishEvents[userId][eventId].startDateTime;
+        endDateTime = publishEvents[userId][eventId].endDateTime;
+        place = publishEvents[userId][eventId].place;
+        mapLink = publishEvents[userId][eventId].mapLink;
     }
     
     function CreatePublishEvent(string name, string description, string tags, string startDateTime, string endDateTime, string place, string mapLink) returns (uint eventId){
         require(bytes(users[msg.sender].name).length != 0);
         require(bytes(name).length != 0);
+        var userId = users[msg.sender].userId;
         eventId = users[msg.sender].lastEventId;
-        publishEvents[users[msg.sender].userId][eventId] = publishEvent ({
+        publishEvents[userId][eventId] = publishEvent ({
             eventId: eventId,
             publishTime: block.timestamp,
             name: name, 
@@ -191,25 +202,26 @@ contract ETicket is StandardToken, Ownable {
         users[msg.sender].lastEventId++;
 
         // for search
-        eventsForSearch[lastEventForSearchId] = eventForSearch({
-            eventForSearchId: lastEventForSearchId,
-            publisher: msg.sender,
+        eventsSearch[lastEventSearchId] = eventSearch({
+            eventSearchId: lastEventSearchId,
+            userId: userId,
             eventId: eventId
         });
-        lastEventForSearchId++;
+        lastEventSearchId++;
     }
 
     function ModifyPublishEvent(uint eventId, string name, string description, string tags, string startDateTime, string endDateTime, string place, string mapLink) {
         require(bytes(users[msg.sender].name).length != 0);
         require(bytes(name).length != 0);
         require(bytes(publishEvents[users[msg.sender].userId][eventId].name).length != 0);
-        publishEvents[users[msg.sender].userId][eventId].name = name;
-        publishEvents[users[msg.sender].userId][eventId].description = description;
-        publishEvents[users[msg.sender].userId][eventId].tags = tags;
-        publishEvents[users[msg.sender].userId][eventId].startDateTime = startDateTime;
-        publishEvents[users[msg.sender].userId][eventId].endDateTime = endDateTime;
-        publishEvents[users[msg.sender].userId][eventId].place = place;
-        publishEvents[users[msg.sender].userId][eventId].mapLink = mapLink;
+        var userId = users[msg.sender].userId;
+        publishEvents[userId][eventId].name = name;
+        publishEvents[userId][eventId].description = description;
+        publishEvents[userId][eventId].tags = tags;
+        publishEvents[userId][eventId].startDateTime = startDateTime;
+        publishEvents[userId][eventId].endDateTime = endDateTime;
+        publishEvents[userId][eventId].place = place;
+        publishEvents[userId][eventId].mapLink = mapLink;
     }
 
     function StopPublishEvent() {
