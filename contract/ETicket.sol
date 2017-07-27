@@ -109,23 +109,23 @@ contract ETicketToken is StandardToken, Ownable {
     }
 
     // user operation
-    function getUsersCount() returns (uint _usersCount) {
+    function getUsersCount() returns (uint) {
         return usersCount;
     }
 
-    function getUserVersion() returns (uint _version) {
+    function getUserVersion() returns (uint) {
         return getUserVersionByAddress(msg.sender);
     }
 
-    function getUser()  returns (string _name, string _email, string _description, uint _version) {
+    function getUser() returns (string, string, string, uint) {
         return getUserByAddress(msg.sender);
     }
 
-    function getUserVersionByAddress(address _address) userExists(_address)returns (uint _version) {
+    function getUserVersionByAddress(address _address) userExists(_address) returns (uint) {
         return users[_address].version;
     }
 
-    function getUserByAddress(address _address) userExists(_address) returns (string _name, string _email, string _description, uint _version) {
+    function getUserByAddress(address _address) userExists(_address) returns (string, string, string, uint) {
         return (users[_address].name, users[_address].email, users[_address].description, users[_address].version);
     }
 
@@ -155,26 +155,19 @@ contract ETicketToken is StandardToken, Ownable {
         return eventRefs.length - 1;
     }
 
-    function getEventSearchVersion(uint _eventRefId) eventRefExists(_eventRefId) returns (uint _version) {
+    function getEventSearchVersion(uint _eventRefId) eventRefExists(_eventRefId) returns (uint) {
         require(_eventRefId < eventRefs.length);
         var _publisher = eventRefs[_eventRefId].publisher;
         var _eventId = eventRefs[_eventRefId].eventId;
         return users[_publisher].events[_eventId].version;
     }
 
-    function getEventSearch(uint _eventRefId) eventRefExists(_eventRefId) returns (address _publisher, uint _eventId, string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _version) {
+    function getEventSearch(uint _eventRefId) eventRefExists(_eventRefId) returns (address, uint, string, string, string, string, string, string, string, uint) {
         require(_eventRefId < eventRefs.length);
-        _publisher = eventRefs[_eventRefId].publisher;
-        _eventId = eventRefs[_eventRefId].eventId;
+        var _publisher = eventRefs[_eventRefId].publisher;
+        var _eventId = eventRefs[_eventRefId].eventId;
         var _event = users[_publisher].events[_eventId];
-        _name = _event.name;
-        _description = _event.description;
-        _tags = _event.tags;
-        _startDateTime = _event.startDateTime;
-        _endDateTime = _event.endDateTime;
-        _place = _event.place;
-        _mapLink = _event.mapLink;
-        _version = _event.version;
+        return (_publisher, _eventId, _event.name,  _event.description, _event.tags, _event.startDateTime, _event.endDateTime, _event.place, _event.mapLink, _event.version);        
     }
 
 
@@ -212,44 +205,37 @@ contract ETicketToken is StandardToken, Ownable {
 
 
     // publish event operation
-    function getPublishEventsMaxId(uint _eventId) returns (uint _maxId) {
+    function getPublishEventsMaxId(uint _eventId) returns (uint) {
         return getPublishEventsMaxIdByAddress(msg.sender, _eventId);
     }
 
-    function getPublishEventVersion(uint _eventId)  returns (uint _version) {
+    function getPublishEventVersion(uint _eventId)  returns (uint) {
         return getPublishEventVersionByAddress(msg.sender, _eventId);
     }
 
-    function getPublishEvent(uint _eventId) returns (string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _version) {
+    function getPublishEvent(uint _eventId) returns (string, string, string, string, string, string, string, uint) {
         return getPublishEventByAddress(msg.sender, _eventId);
     }
 
-    function getPublishEventsMaxIdByAddress(address _address, uint _eventId) userExists(_address)returns (uint _maxId) {
+    function getPublishEventsMaxIdByAddress(address _address, uint _eventId) userExists(_address)returns (uint) {
         return users[_address].events.length - 1;
     }
 
-    function getPublishEventVersionByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint _version) {
+    function getPublishEventVersionByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint) {
         return users[_address].events[_eventId].version;
     }
 
-    function getPublishEventByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _version) {
+    function getPublishEventByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, string, string, string, string, string, uint) {
         var _event = users[_address].events[_eventId];
-        _name = _event.name;
-        _description = _event.description;
-        _tags = _event.tags;
-        _startDateTime = _event.startDateTime;
-        _endDateTime = _event.endDateTime;
-        _place = _event.place;
-        _mapLink = _event.mapLink;
-        _version = _event.version;
+        return (_event.name, _event.description, _event.tags, _event.startDateTime, _event.endDateTime, _event.place, _event.mapLink, _event.version);
     }
 
-    function createPublishEvent(string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _maxPrice) userExists(msg.sender) returns (uint _eventId){
+    function createPublishEvent(string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _maxPrice) userExists(msg.sender) returns (uint){
         require(bytes(_name).length != 0);
         var _user = users[msg.sender];
 
         // create publish event
-        _eventId = _user.events.length;
+        var _eventId = _user.events.length;
         users[msg.sender].events.push(publishEvent ({
             publishTime: block.timestamp,
             name: _name,
@@ -271,6 +257,8 @@ contract ETicketToken is StandardToken, Ownable {
             publisher: msg.sender,
             eventId: _eventId
         }));
+        
+        return _eventId;
     }
 
     function modifyPublishEvent(uint _eventId, string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _maxPrice) eventExists(msg.sender, _eventId)  {
@@ -304,47 +292,41 @@ contract ETicketToken is StandardToken, Ownable {
     }
 
     // publish event ticket operation
-    function getPublishEventTicketsMaxId(uint _eventId)  returns (uint _maxId) {
+    function getPublishEventTicketsMaxId(uint _eventId)  returns (uint) {
         return getPublishEventTicketsMaxIdByAddress(msg.sender, _eventId);
     }
 
-    function getPublishEventTicketVersion(uint _eventId, uint _ticketId) returns (uint _version) {
+    function getPublishEventTicketVersion(uint _eventId, uint _ticketId) returns (uint) {
         return getPublishEventTicketVersionByAddress(msg.sender, _eventId, _ticketId);
     }
 
-    function getPublishEventTicket(uint _eventId, uint _ticketId) returns (uint _ticketGroupId, uint _salePrice, bool _sale, uint _firstSoldPrice, address _owner, uint8 _status, uint _version) {
+    function getPublishEventTicket(uint _eventId, uint _ticketId) returns (uint, uint, bool, uint, address, uint8, uint) {
         return getPublishEventTicketByAddress(msg.sender, _eventId, _ticketId);
     }
 
-    function getPublishEventTicketsMaxIdByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint _maxId) {
+    function getPublishEventTicketsMaxIdByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint) {
         return users[_address].events[_eventId].tickets.length - 1;
     }
 
-    function getPublishEventTicketVersionByAddress(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint _version) {
+    function getPublishEventTicketVersionByAddress(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint) {
         return users[_address].events[_eventId].tickets[_ticketId].version;
     }
 
-    function getPublishEventTicketByAddress(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint _ticketGroupId, uint _salePrice, bool _sale, uint _firstSoldPrice, address _owner, uint8 _status, uint _version) {
+    function getPublishEventTicketByAddress(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint, uint, bool, uint, address, uint8, uint) {
         var _ticket = users[_address].events[_eventId].tickets[_ticketId];
-        _ticketGroupId = _ticket.ticketGroupId;
-        _salePrice = _ticket.salePrice;
-        _sale = _ticket.sale;
-        _firstSoldPrice = _ticket.firstSoldPrice;
-        _owner = _ticket.owner;
-        _status = _ticket.status;
-        _version = _ticket.version;
+        return (_ticket.ticketGroupId,  _ticket.salePrice, _ticket.sale, _ticket.firstSoldPrice, _ticket.owner, _ticket.status, _ticket.version);
     }
 
     function createPublishEventTicket(uint _eventId, uint _amount, uint _price) eventExists(msg.sender, _eventId)  returns (uint _total) {
         return createPublishEventTicketGroup(_eventId, 1, _amount, _price);
     }
 
-    function createPublishEventTicketGroup(uint _eventId, uint _unit, uint _amount, uint _price) eventExists(msg.sender, _eventId)  returns (uint _total) {
+    function createPublishEventTicketGroup(uint _eventId, uint _unit, uint _amount, uint _price) eventExists(msg.sender, _eventId)  returns (uint) {
         require(_unit != 0 && _amount != 0);
         var _user = users[msg.sender];
         var _event = _user.events[_eventId];
         require(_price <= _event.maxPrice);
-        _total = 0;
+        var _total = 0;
         for (uint i = 0; i < _amount; i++) {
             var _ticketGroupId = _event.lastTicketGroupId;
             for (uint j = 0; j < _unit; j++) {
@@ -371,6 +353,7 @@ contract ETicketToken is StandardToken, Ownable {
             }
             _event.lastTicketGroupId++;
         }
+        return _total;
     }
 
     function discardPublishEventTicketGroup() {
