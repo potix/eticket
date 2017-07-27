@@ -153,20 +153,12 @@ contract ETicketToken is StandardToken, Ownable {
         return eventRefs.length - 1;
     }
 
-    function getEventSearchVersion(uint _eventRefId) eventRefExists(_eventRefId) returns (uint) {
+    function getEventRef(uint _eventRefId) eventRefExists(_eventRefId) returns (address, uint) {
         require(_eventRefId < eventRefs.length);
         var _publisher = eventRefs[_eventRefId].publisher;
         var _eventId = eventRefs[_eventRefId].eventId;
-        return publishEvents[_publisher][_eventId].version;
+        return (_publisher, _eventId);        
     }
-
-    // function getEventSearch(uint _eventRefId) eventRefExists(_eventRefId) returns (address, uint, string, string, string, string, string, string, string, uint) {
-    //     require(_eventRefId < eventRefs.length);
-    //     var _publisher = eventRefs[_eventRefId].publisher;
-    //     var _eventId = eventRefs[_eventRefId].eventId;
-    //     var _event = publishEvents[_publisher][_eventId];
-    //     return (_publisher, _eventId, _event.name,  _event.description, _event.tags, _event.startDateTime, _event.endDateTime, _event.place, _event.mapLink, _event.version);        
-    // }
 
 
     // ticket operation
@@ -224,7 +216,7 @@ contract ETicketToken is StandardToken, Ownable {
     }
 
     // function getPublishEventByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, string, string, string, string, string, uint) {
-    //     var _event = users[_address].events[_eventId];
+    //     var _event = publishEvents[_address][_eventId];
     //     return (_event.name, _event.description, _event.tags, _event.startDateTime, _event.endDateTime, _event.place, _event.mapLink, _event.version);
     // }
 
