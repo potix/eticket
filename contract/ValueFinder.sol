@@ -1,7 +1,9 @@
+pragma solidity ^0.4.11;
+
 library ValueFinder {
 
     // value type
-    //
+    // 0 none
     // 1 string
     // 2 bool
     // 3 int
@@ -17,7 +19,6 @@ library ValueFinder {
     // 01000000 0x40 nameSepStart
     // 10000000 0x80 valueSepStart
     
-    
     function isKeymatch(string keyA, bytes bSrc, uint bkeyBPos, uint keyBLen) private returns (bool) {
         bytes memory bkeyA = bytes(keyA);
         if (bkeyA.length != keyBLen) {
@@ -31,15 +32,10 @@ library ValueFinder {
         return true;
     }
     
-    function getValueString(bytes bSrc, bytes valuePos, uint valueLen) private returns (string) {
-        
-    }
-    
-    function find(string src, string findKey) private returns (bool found, uint valueType, string value) {
-        uint pos = 0;
+    function findValuePos(string src, string findKey) private returns (bool, uint8, uint, uint) {
         bytes memory bSrc = bytes(src);
-        var state = 0;
-        
+        int16 state = 0;
+        uint pos = 0;
         uint keyStartPos = 0;
         uint keyLen = 0;
         uint valueStartPos = 0;
@@ -65,7 +61,7 @@ library ValueFinder {
                     continue;
                 } else {
                     // unsupported format
-                    break;
+                    return (false, 0, pos, 0);
                 }
             } else if ((state & 0x02) != 0) {
                 if (bSrc[pos] == 0x7d) {
@@ -73,7 +69,7 @@ library ValueFinder {
                     break;
                 } else {
                     // unsupported format
-                    break;
+                    return (false, 0, pos, 0);
                 }
             } else if ((state & 0x04) != 0) {
                 // parse value
@@ -81,13 +77,16 @@ library ValueFinder {
                     keyStartPos = pos + 1;
                     state &= ~0x04;
                     state |= 0x10;
+                } else if ((state & 0x10) != 0 && bSrc[pos] < 0x20) {
+                    // unsupported format
+                    return (false, 1, pos, 0);
                 } else if ((state & 0x10) != 0 && bSrc[pos] == 0x22) {
                     keyLen = pos - keyStartPos; 
                     state &= ~0x10 ;
                     state |= 0x40;
                 } else {
                     // unsupported format
-                    break;
+                     return (false, 0, pos, 0);
                 }
             } else if ((state & 0x40) != 0) {
                 if (bSrc[pos] == 0x3a) {
@@ -95,7 +94,7 @@ library ValueFinder {
                    state |= 0x08;
                 } else {
                     // unsupported format
-                    break;
+                     return (false, 0, pos, 0);
                 }
             } else if ((state & 0x08) != 0) {
                 // parse value
@@ -103,11 +102,13 @@ library ValueFinder {
                     valueStartPos = pos + 1;
                     state &= ~0x08;
                     state |= 0x20;
-                } else if ((state & 0x20) == 1 && bSrc[pos] == 0x22) {
+                } else if ((state & 0x20) != 0 && bSrc[pos] < 0x20) {
+                    // unsupported format
+                    return (false, 1, pos, 0);
+                } else if ((state & 0x20) != 0 && bSrc[pos] == 0x22) {
                     valueLen = pos - valueStartPos; 
                     if (isKeymatch(findKey, bSrc, keyStartPos, keyLen)) {
-                        valueString = getValueString(bSrc, valueStartPos, valueLen);
-                        return (true, 1, valueString);
+                        return (true, 1, valueStartPos, valueLen);
                     }
                     state &= ~0x20;
                     state |= 0x80;
@@ -118,14 +119,14 @@ library ValueFinder {
                     }
                     if (bSrc[pos] == 0x74 && bSrc[pos + 1] == 0x72 && bSrc[pos + 2] == 0x75 && bSrc[pos + 3] == 0x65) {
                         if (isKeymatch(findKey, bSrc, keyStartPos, keyLen)) {
-                            valueString = getValueString(bSrc, valueStartPos, 4);
-                            return (true, 1, valueString);
+                            return (true, 2, valueStartPos, 4);
                         }
                         pos += 3;
                         state &= ~0x08;
                         state |= 0x80;
                     } else {
-                        break;
+                        // unsupported format
+                        return (false, 2, pos, 0);
                     }
                 } else if (bSrc[pos] == 0x66) {
                     // false
@@ -134,14 +135,14 @@ library ValueFinder {
                     }
                     if (bSrc[pos] == 0x66 && bSrc[pos + 1] == 0x61 && bSrc[pos + 2] == 0x6c && bSrc[pos + 3] == 0x73 && bSrc[pos + 3] == 0x65) {
                         if (isKeymatch(findKey, bSrc, keyStartPos, keyLen)) {
-                            valueString = getValueString(bSrc, valueStartPos, 5);
-                            return (true, 1, valueString);
+                            return (true, 2, valueStartPos, 5);
                         }
                         pos += 4;
                         state &= ~0x08;
                         state |= 0x80;
                     } else {
-                        break;
+                        // unsupported format
+                        return (false, 2, pos, 0);
                     }
                 } else if (bSrc[pos] == 0x6e) {
                     // null
@@ -150,36 +151,38 @@ library ValueFinder {
                     }
                     if (bSrc[pos] == 0x6e && bSrc[pos + 1] == 0x75 && bSrc[pos + 2] == 0x6c && bSrc[pos + 3] == 0x6c) {
                         if (isKeymatch(findKey, bSrc, keyStartPos, keyLen)) {
-                            valueString = getValueString(bSrc, valueStartPos, 4);
-                            return (true, 1, valueString);
+                            return (true, 4, valueStartPos, 4);
                         }
                         pos += 3;
                         state &= ~0x08;
                         state |= 0x80;
                     } else {
-                        break;
+                        // unsupported format
+                        return (false, 4, pos, 0);
                     }
-                } else if (bSrc[pos] == 0x2d || bSrc[pos] == 0x2b || bSrc[pos] >= 0x30  || bSrc[pos] <= 0x39) {
+                } else if (bSrc[pos] == 0x2d || bSrc[pos] >= 0x30  || bSrc[pos] <= 0x39) {
                     // digit
                     valueStartPos = pos;
                     for (uint l = 0; pos + l < bSrc.length; l++) {
-                        if (bSrc[pos] == 0x2d || bSrc[pos] == 0x2b || bSrc[pos] >= 0x30  || bSrc[pos] <= 0x39) {
+                        if (bSrc[pos + l] == 0x2d || bSrc[pos + l] >= 0x30  || bSrc[pos + l] <= 0x39) {
                             l++;
                             continue;
+                        } else if (bSrc[pos + l] == 0x65 || bSrc[pos + l] >= 0x2e) {
+                            // unsupported forrmat 
+                        return (false, 3, pos, 0);
                         }
                         break;
                     }
                     valueLen = (pos + l) - valueStartPos;
                     if (isKeymatch(findKey, bSrc, keyStartPos, keyLen)) {
-                        valueString = getValueString(bSrc, valueStartPos, valueLen);
-                        return (true, 1, valueString);
+                        return (true, 3, valueStartPos, valueLen);
                     }
                     pos += (l - 1);
                     state &= ~0x08;
                     state |= 0x80;
                 } else {
                     // unsupported format
-                    break;
+                    return (false, 0, pos, 0);
                 }
             } else if ((state & 0x80) != 0) {
                 if (bSrc[pos] == 0x2c) {
@@ -187,26 +190,45 @@ library ValueFinder {
                    state |= 0x04;
                 } else {
                     // unsupported format
-                    break;
+                    return (false, 0, pos, 0);
                 }
             }
             pos++;
         }
-        return (false, 0, false, "");
+        return (false, 0, pos, 0);
     }
     
-    
-   
-    function getString(string src, string key) internal returns (bool found, bool isNull, string value) {
-        
+    function getString(string _src, string _findKey) internal returns (bool, bool, string) {
+            bool _found;
+            uint8 _valuetype;
+            uint _valuePos;
+            uint _valueLen;
+            (_found, _valuetype, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            if (!_found) {
+                return (false, false, "");
+            }
     }
 
-    function getInt(string src, string key) internal returns (bool found, bool isNull, string value) {
-        
+    function getInt(string _src, string _findKey) internal returns (bool, bool, string) {
+            bool _found;
+            uint8 _valuetype;
+            uint _valuePos;
+            uint _valueLen;
+            (_found, _valuetype, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            if (!_found) {
+                return (false, false, "");
+            }    
     }
 
-    function getBool(string src, string key) internal returns (bool found, bool isNull, string value) {
-        
+    function getBool(string _src, string _findKey) internal returns (bool, bool, string) {
+            bool _found;
+            uint8 _valuetype;
+            uint _valuePos;
+            uint _valueLen;
+            (_found, _valuetype, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            if (!_found) {
+                return (false, false, "");
+            }    
     }
     
     
