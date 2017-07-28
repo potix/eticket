@@ -43,12 +43,10 @@ library ValueFinder {
             if (_pos == _bSrc.length) {
                 break;
             }
-            if ((_state & (0x10 | 0x40)) == 0) {
-                // skip white space
-                if (_bSrc[_pos] == 0x20 || _bSrc[_pos] == 0x09 || _bSrc[_pos] == 0x0a || _bSrc[_pos] == 0x0d) {
-                    _pos++;
-                    continue;
-                }
+            // skip white space
+            if (_bSrc[_pos] == 0x20 || _bSrc[_pos] == 0x09 || _bSrc[_pos] == 0x0a || _bSrc[_pos] == 0x0d) {
+                _pos++;
+                continue;
             }
             if ((_state & 0x02) == 0) {
                 if (_bSrc[_pos] == 0x7b) {
@@ -197,7 +195,7 @@ library ValueFinder {
                     if (_pos + 4 >= _bSrc.length) {
                         break;
                     }
-                    if (_bSrc[_pos + 1] == 0x61 && _bSrc[_pos + 2] == 0x6c && _bSrc[_pos + 3] == 0x73 && _bSrc[_pos + 3] == 0x65) {
+                    if (_bSrc[_pos + 1] == 0x61 && _bSrc[_pos + 2] == 0x6c && _bSrc[_pos + 3] == 0x73 && _bSrc[_pos + 4] == 0x65) {
                         if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
                             return (true, 2, _valueStartPos, 5);
                         }
