@@ -14,8 +14,6 @@ library ValueFinder {
     // 00000010 0x02 objectStart 
     // 00000100 0x04 keyStart 
     // 00001000 0x08 valueStart
-    // 00010000 0x10 keyStringStart
-    // 00100000 0x20 valueStringStart
     // 01000000 0x40 nameSepStart
     // 10000000 0x80 valueSepStart
     
@@ -40,7 +38,7 @@ library ValueFinder {
         uint _keyLen = 0;
         uint _valueStartPos = 0;
         uint _valueLen = 0;
-        
+        uint l;
         while (true) {
             if (_pos == _bSrc.length) {
                 break;
@@ -55,9 +53,9 @@ library ValueFinder {
             if ((_state & 0x02) == 0) {
                 if (_bSrc[_pos] == 0x7b) {
                     // start object
+                    _pos++;
                     _state |= 0x02;
                     _state |= 0x04;
-                    _pos++;
                     continue;
                 } else {
                     // unsupported format
@@ -66,6 +64,8 @@ library ValueFinder {
             } else if ((_state & 0x02) != 0) {
                 if (_bSrc[_pos] == 0x7d) {
                     // end object
+                    _state &= ~0x02;
+                    _pos++;
                     break;
                 } else {
                     // unsupported format
@@ -74,24 +74,58 @@ library ValueFinder {
             } else if ((_state & 0x04) != 0) {
                 // parse value
                 if ((_state & 0x10) == 0 && _bSrc[_pos] == 0x22) {
-                    _keyStartPos = _pos + 1;
+                    for (l = 1; _pos + l < _bSrc.length; l++) {
+                        if (l == 1) {
+                            _keyStartPos = _pos + 1;
+                        }
+                        if (_bSrc[_pos + l] < 20) {
+                            // unsupported format
+                            return (false, 1, _pos, 0);
+                        } else if (_bSrc[_pos + l] == 0x5c) {
+                            // escaped
+                            if (_bSrc[_pos + l + 1] == 0x22 || 
+                                _bSrc[_pos + l + 1] == 0x5c ||
+                                _bSrc[_pos + l + 1] == 0x2f ||
+                                _bSrc[_pos + l + 1] == 0x62 ||
+                                _bSrc[_pos + l + 1] == 0x66 ||
+                                _bSrc[_pos + l + 1] == 0x6e ||
+                                _bSrc[_pos + l + 1] == 0x72 ||
+                                _bSrc[_pos + l + 1] == 0x74) {
+                                if (_pos + l + 1 >= _bSrc.length) {
+                                        // unsupported format
+                                        return (false, 1, _pos, 0);
+                                }
+                                l++;
+                            } else if (_bSrc[_pos + l + 1] == 0x75) {
+                                if (_pos + l + 5 >= _bSrc.length) {
+                                        // unsupported format
+                                        return (false, 1, _pos, 0);
+                                }
+                                l += 5;
+                            }
+                        } else if (_bSrc[_pos + l] == 0x22) {
+                            break;  
+                        }               
+                    }
+                    if (_bSrc[_pos] == 0x22 && l == 1) {
+                        // unsupported format
+                        return (false, 1, _pos, 0);
+                    }
+                    _keyLen = _pos + l - _keyStartPos; 
+                    _pos += l;
                     _state &= ~0x04;
-                    _state |= 0x10;
-                } else if ((_state & 0x10) != 0 && _bSrc[_pos] < 0x20) {
-                    // unsupported format
-                    return (false, 1, _pos, 0);
-                } else if ((_state & 0x10) != 0 && _bSrc[_pos] == 0x22) {
-                    _keyLen = _pos - _keyStartPos; 
-                    _state &= ~0x10 ;
                     _state |= 0x40;
+                    continue;
                 } else {
                     // unsupported format
                     return (false, 0, _pos, 0);
                 }
             } else if ((_state & 0x40) != 0) {
                 if (_bSrc[_pos] == 0x3a) {
+                   _pos++;
                    _state &= ~0x40;
                    _state |= 0x08;
+                   continue;
                 } else {
                     // unsupported format
                     return (false, 0, _pos, 0);
@@ -99,19 +133,48 @@ library ValueFinder {
             } else if ((_state & 0x08) != 0) {
                 // parse value
                 if ((_state & 0x20) == 0 && _bSrc[_pos] == 0x22) {
-                    _valueStartPos = _pos + 1;
-                    _state &= ~0x08;
-                    _state |= 0x20;
-                } else if ((_state & 0x20) != 0 && _bSrc[_pos] < 0x20) {
-                    // unsupported format
-                    return (false, 1, _pos, 0);
-                } else if ((_state & 0x20) != 0 && _bSrc[_pos] == 0x22) {
-                    _valueLen = _pos - _valueStartPos; 
-                    if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
-                        return (true, 1, _valueStartPos, _valueLen);
+                    for (l = 1; _pos + l < _bSrc.length; l++) {
+                        if (l == 1) {
+                            _valueStartPos = _pos + 1;
+                        }
+                        if (_bSrc[_pos + l] < 20) {
+                            // unsupported format
+                            return (false, 1, _pos, 0);
+                        } else if (_bSrc[_pos + l] == 0x5c) {
+                            // escaped
+                            if (_bSrc[_pos + l + 1] == 0x22 || 
+                                _bSrc[_pos + l + 1] == 0x5c ||
+                                _bSrc[_pos + l + 1] == 0x2f ||
+                                _bSrc[_pos + l + 1] == 0x62 ||
+                                _bSrc[_pos + l + 1] == 0x66 ||
+                                _bSrc[_pos + l + 1] == 0x6e ||
+                                _bSrc[_pos + l + 1] == 0x72 ||
+                                _bSrc[_pos + l + 1] == 0x74) {
+                                if (_pos + l + 1 >= _bSrc.length) {
+                                        // unsupported format
+                                        return (false, 1, _pos, 0);
+                                }
+                                l++;
+                            } else if (_bSrc[_pos + l + 1] == 0x75) {
+                                if (_pos + l + 5 >= _bSrc.length) {
+                                        // unsupported format
+                                        return (false, 1, _pos, 0);
+                                }
+                                l += 5;
+                            }
+                        } else if (_bSrc[_pos + l] == 0x22) {
+                            break;  
+                        }               
                     }
-                    _state &= ~0x20;
+                    if (_bSrc[_pos] == 0x22 && l == 1) {
+                        // unsupported format
+                        return (false, 1, _pos, 0);
+                    }
+                    _valueLen = _pos + l - _valueStartPos; 
+                    _pos += l;
+                    _state &= ~0x08;
                     _state |= 0x80;
+                    continue;
                 } else if (_bSrc[_pos] == 0x74) {
                     // true
                     if (_pos + 3 >= _bSrc.length) {
@@ -121,9 +184,10 @@ library ValueFinder {
                         if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
                             return (true, 2, _valueStartPos, 4);
                         }
-                        _pos += 3;
+                        _pos += 4;
                         _state &= ~0x08;
                         _state |= 0x80;
+                        continue;
                     } else {
                         // unsupported format
                         return (false, 2, _pos, 0);
@@ -137,9 +201,10 @@ library ValueFinder {
                         if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
                             return (true, 2, _valueStartPos, 5);
                         }
-                        _pos += 4;
+                        _pos += 5;
                         _state &= ~0x08;
                         _state |= 0x80;
+                        continue;
                     } else {
                         // unsupported format
                         return (false, 2, _pos, 0);
@@ -153,9 +218,10 @@ library ValueFinder {
                         if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
                             return (true, 4, _valueStartPos, 4);
                         }
-                        _pos += 3;
+                        _pos += 4;
                         _state &= ~0x08;
                         _state |= 0x80;
+                        continue;
                     } else {
                         // unsupported format
                         return (false, 4, _pos, 0);
@@ -163,7 +229,7 @@ library ValueFinder {
                 } else if (_bSrc[_pos] == 0x2d || _bSrc[_pos] >= 0x30  || _bSrc[_pos] <= 0x39) {
                     // digit
                     _valueStartPos = _pos;
-                    for (uint l = 1; _pos + l < _bSrc.length; l++) {
+                    for (l = 1; _pos + l < _bSrc.length; l++) {
                         if (_bSrc[_pos + l] == 0x2d || _bSrc[_pos + l] >= 0x30  || _bSrc[_pos + l] <= 0x39) {
                             l++;
                             continue;
@@ -181,17 +247,20 @@ library ValueFinder {
                     if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
                         return (true, 3, _valueStartPos, _valueLen);
                     }
-                    _pos += (l - 1);
+                    _pos += l;
                     _state &= ~0x08;
                     _state |= 0x80;
+                    continue;
                 } else {
                     // unsupported format
                     return (false, 0, _pos, 0);
                 }
             } else if ((_state & 0x80) != 0) {
                 if (_bSrc[_pos] == 0x2c) {
+                   _pos++;
                    _state &= ~0x80;
                    _state |= 0x04;
+                   continue;
                 } else {
                     // unsupported format
                     return (false, 0, _pos, 0);
