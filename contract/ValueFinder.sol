@@ -270,9 +270,54 @@ library ValueFinder {
     }
     
     
-    function convertString (string _src, uint _valuePos, uint _valueLen) private returns (string) {
-        bytes memory bSrc = bytes(_src);
-        bytes memory newBValue = new bytes(_valueLen);
+    function convertString (string _src, uint _valuePos, uint _valueLen) private returns (string, bool) {
+        bytes memory _bSrc = bytes(_src);
+        bytes memory _newBValue = new bytes(_valueLen);
+        uint i = 0;
+        for (uint l = 0; l < _valueLen; l++) {
+            if (_bSrc[_valuePos + l] == 0x5c) {
+                if (_bSrc[_valuePos + l + 1] == 0x22 || 
+                    _bSrc[_valuePos + l + 1] == 0x5c ||
+                    _bSrc[_valuePos + l + 1] == 0x2f ||
+                    _bSrc[_valuePos + l + 1] == 0x62 ||
+                    _bSrc[_valuePos + l + 1] == 0x66 ||
+                    _bSrc[_valuePos + l + 1] == 0x6e ||
+                    _bSrc[_valuePos + l + 1] == 0x72 ||
+                    _bSrc[_valuePos + l + 1] == 0x74) {
+                        _newBValue[i++] = _bSrc[_valuePos + l + 1];    
+                        l++;
+                } else if (_bSrc[_valuePos + l + 1] == 0x75) {
+                    uint16 code = 0;
+                    uint8 v;
+                    for (uint j = 0; j < 4; j++) {
+                        
+                        if ((_bSrc[_valuePos + l + 1 + j] >= 0x30 && _bSrc[_valuePos + l + 1 + j] <= 0x39) ||
+                            (_bSrc[_valuePos + l + 1 + j] >= 0x41 || _bSrc[_valuePos + l + 1 + j] <= 0x46) ||
+                            (_bSrc[_valuePos + l + 1 + j] >= 0x61 || _bSrc[_valuePos + l + 1 + j] <= 0x66)) {
+                                v = (((uint8(_bSrc[_valuePos + l + 1 + j]) - 33) % 32) + 10 ) % 25;
+                        } else {
+                            return ("", false);
+                        }
+                        code = (code * 16) + v; 
+                    }
+                    if (code <= 0x7F) {
+					    _newBValue[i++] = uint8(code * 0xff);
+				    } else if (code <= 0x7FF) {
+					    _newBValue[i++] = uint8(0xC0 | (code >> 6));
+				    	_newBValue[i++]  = uint8(0x80 | (code & 0x3F));
+			    	} else if (code <= 0xFFFF) {
+			    		_newBValue[i++]  = uint8(0xE0 | (code >> 12));
+			    		_newBValue[i++]  = uint8(0x80 | ((code >> 6) & 0x3F));
+			    		_newBValue[i++]  = uint8(0x80 | (code & 0x3F));
+				    }
+
+                }
+            } else {
+                _newBValue[i++] = _bSrc[_valuePos + l]; 
+            }
+        }
+
+        
         
         
     } 
@@ -285,7 +330,7 @@ library ValueFinder {
              if (i == 0 && _bSrc[_valuePos + i] == 0x2d) {
                 _negative = true;    
              } else {
-                _result = (_result * 10) +  (int(_bSrc[_valuePos + i]) - 0x30);  
+                _result = (_result * 10) +  (uint8(_bSrc[_valuePos + i]) - 0x30);  
              }
          }
          if (_negative) {
