@@ -198,37 +198,65 @@ library ValueFinder {
         return (false, 0, pos, 0);
     }
     
+    
+    function convertString (string _src, uint _valuePos, uint _valueLen) private returns (string) {
+        
+    } 
+
+    function convertInt (string _src, uint _valuePos, uint _valueLen) private returns (int) {
+        
+    } 
+
+    function convertBool (string _src, uint _valuePos, uint _valueLen) private returns (bool) {
+        
+    } 
+    
     function getString(string _src, string _findKey) internal returns (bool, bool, string) {
             bool _found;
-            uint8 _valuetype;
+            uint8 _valueType;
             uint _valuePos;
             uint _valueLen;
-            (_found, _valuetype, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            (_found, _valueType, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
                 return (false, false, "");
+            }
+            if (_found && (_valueType == 2 || _valueType == 3)) {
+                return (false, false, "");
+            } else  if (_found && _valueType == 4) {
+                return (true, true, "");
             }
     }
 
     function getInt(string _src, string _findKey) internal returns (bool, bool, string) {
             bool _found;
-            uint8 _valuetype;
+            uint8 _valueType;
             uint _valuePos;
             uint _valueLen;
-            (_found, _valuetype, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            (_found, _valueType, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
                 return (false, false, "");
-            }    
+            }   
+            if (_found && (_valueType == 1 || _valueType == 2)) {
+                return (false, false, "");
+            } else  if (_found && _valueType == 4) {
+                return (true, true, "");
+            }
     }
 
     function getBool(string _src, string _findKey) internal returns (bool, bool, string) {
             bool _found;
-            uint8 _valuetype;
+            uint8 _valueType;
             uint _valuePos;
             uint _valueLen;
-            (_found, _valuetype, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            (_found, _valueType, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
                 return (false, false, "");
             }    
+            if (_found && (_valueType == 1 || _valueType == 3)) {
+                return (false, false, "");
+            } else  if (_found && _valueType == 4) {
+                return (true, true, "");
+            }
     }
     
     
