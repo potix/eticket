@@ -14,6 +14,8 @@ library ValueFinder {
     function find(string src, string findKey) private returns (bool found, uint valueType, string value) {
         uint pos = 0;
         var bSrc = bytes(src);
+        
+        // TODO to bit flag
         bool objectStart = false;
         bool keyStart = false;
         bool valueStart = false;
