@@ -46,27 +46,17 @@ library ValueFinder {
                 _pos++;
                 continue;
             }
-            if ((_state & ST_OBJECT_START) == 0) {
-                if (_bSrc[_pos] == '{') {
-                    // start object
-                    _pos++;
-                    _state |= ST_OBJECT_START;
-                    _state |= ST_KEY_START;
-                    continue;
-                } else {
-                    // unsupported format
-                    return (false, T_NONE, _pos, 0);
-                }
-            } else if ((_state & ST_OBJECT_START) != 0) {
-                if (_bSrc[_pos] == '}') {
-                    // end object
-                    _pos++;
-                    _state &= ~ST_OBJECT_START;
-                    break;
-                } else {
-                    // unsupported format
-                    return (false, T_NONE, _pos, 0);
-                }
+            if ((_state & ST_OBJECT_START) == 0 && _bSrc[_pos] == '{') {
+                // start object
+                _pos++;
+                _state |= ST_OBJECT_START;
+                _state |= ST_KEY_START;
+                continue;
+            } else if ((_state & ST_OBJECT_START) != 0 && _bSrc[_pos] == '}') {
+                // end object
+                _pos++;
+                _state &= ~ST_OBJECT_START;
+                break;
             } else if ((_state & ST_KEY_START) != 0) {
                 // parse value
                 if (_bSrc[_pos] == '"') {
@@ -120,7 +110,7 @@ library ValueFinder {
                         return (false, T_K_STRING, _pos, 0);
                     }
                     _keyLen = _pos + l - _keyStartPos; 
-                    _pos += l;
+                    _pos += l + 1;
                     _state &=  ~ST_KEY_START;
                     _state |= ST_NAME_SEP_START;
                     continue;
@@ -194,7 +184,7 @@ library ValueFinder {
                     if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
                         return (true, T_V_STRING, _valueStartPos, _valueLen);
                     } 
-                    _pos += l;
+                    _pos += l + 1;
                     _state &=  ~ST_VALUE_START;
                     _state |= ST_VALUE_SEP_START;
                     continue;
@@ -205,7 +195,7 @@ library ValueFinder {
                     }
                     if (_bSrc[_pos + 1] == 'r' && _bSrc[_pos + 2] == 'u' && _bSrc[_pos + 3] == 'e') {
                         if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
-                            return (true, T_V_BOOL, _valueStartPos, 4);
+                            return (true, T_V_BOOL, _pos, 4);
                         }
                         _pos += 4;
                         _state &=  ~ST_VALUE_START;
@@ -222,7 +212,7 @@ library ValueFinder {
                     }
                     if (_bSrc[_pos + 1] == 'a' && _bSrc[_pos + 2] == 'l' && _bSrc[_pos + 3] == 's' && _bSrc[_pos + 4] == 'e') {
                         if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
-                            return (true, T_V_BOOL, _valueStartPos, 5);
+                            return (true, T_V_BOOL, _pos, 5);
                         }
                         _pos += 5;
                         _state &= ~ST_VALUE_START;
@@ -232,14 +222,14 @@ library ValueFinder {
                         // unsupported format
                         return (false, T_V_BOOL, _pos, 0);
                     }
-                } else if (_bSrc[_pos] == 0x6e) {
+                } else if (_bSrc[_pos] == 'n') {
                     // null
                     if (_pos + 3 >= _bSrc.length) {
                         break;
                     }
                     if (_bSrc[_pos + 1] == 'u' && _bSrc[_pos + 2] == 'l' && _bSrc[_pos + 3] == 'l') {
                         if (isKeymatch(_findKey, _bSrc, _keyStartPos, _keyLen)) {
-                            return (true, T_V_NULL, _valueStartPos, 4);
+                            return (true, T_V_NULL, _pos, 4);
                         }
                         _pos += 4;
                         _state &=  ~ST_VALUE_START;
@@ -254,7 +244,7 @@ library ValueFinder {
                     _valueStartPos = _pos;
                     _pos++;
                     for (l = 0; _pos + l < _bSrc.length; l++) {
-                        if (_bSrc[_pos + l] >= '0'  || _bSrc[_pos + l] <= '9') {
+                        if (_bSrc[_pos + l] >= '0'  && _bSrc[_pos + l] <= '9') {
                             continue;
                         } else if (_bSrc[_pos + l] == '.' || _bSrc[_pos + l] >= '+' || _bSrc[_pos + l] >= 'e') {
                             // unsupported forrmat 
@@ -381,7 +371,7 @@ library ValueFinder {
          }
     } 
     
-    function getString(string _src, string _findKey) internal returns (bool, bool, string) {
+    function findString(string _src, string _findKey) internal returns (bool, bool, string) {
             bool _found;
             uint8 _type;
             uint _valuePos;
@@ -399,7 +389,7 @@ library ValueFinder {
             }
     }
 
-    function getInt(string _src, string _findKey) internal returns (bool, bool, int) {
+    function findInt(string _src, string _findKey) internal returns (bool, bool, int) {
             bool _found;
             uint8 _type;
             uint _valuePos;
@@ -417,7 +407,7 @@ library ValueFinder {
             }
     }
 
-    function getBool(string _src, string _findKey) internal returns (bool, bool, bool) {
+    function findBool(string _src, string _findKey) internal returns (bool, bool, bool) {
             bool _found;
             uint8 _type;
             uint _valuePos;
