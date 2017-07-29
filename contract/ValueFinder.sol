@@ -39,8 +39,8 @@ library ValueFinder {
     function findValuePos(finder _finder, string _findKey) private {
         uint8 _state = 0;
         uint _pos = 0;
-        uint _l;
-        uint _m;
+        uint _i;
+        uint _j;
         byte _c;
         byte _nc;
         while (true) {
@@ -69,22 +69,22 @@ library ValueFinder {
                 if (_c == '"') {
                     _pos++;
                     _finder.keyStartPos = _pos;
-                    for (_l = 0; _pos + _l < _finder.bSrc.length; _l++) {
-                        _nc = _finder.bSrc[_pos + _l]; 
+                    for (_i = 0; _pos + _i < _finder.bSrc.length; _i++) {
+                        _nc = _finder.bSrc[_pos + _i]; 
                         if (_nc <= 0x1F) {
                             // unsupported format
                             _finder.found = false;
                             _finder.vType = VT_NONE;
                             return;
                         } else if (_nc == '\\') {
-                            if (_pos + _l + 1 >= _finder.bSrc.length) {
+                            if (_pos + _i + 1 >= _finder.bSrc.length) {
                                 // unsupported format
                                 _finder.found = false;
                                 _finder.vType = VT_NONE;
                                 return;
                             }
-                            _l++;
-                            _nc = _finder.bSrc[_pos + _l];
+                            _i++;
+                            _nc = _finder.bSrc[_pos + _i];
                             if (_nc == '"' || 
                                 _nc == '\\' ||
                                 _nc == '/' ||
@@ -95,14 +95,14 @@ library ValueFinder {
                                 _nc == 't') {
                                 // pass
                             } else if (_nc == 'u') {
-                                if (_pos + _l + 4 >= _finder.bSrc.length) {
+                                if (_pos + _i + 4 >= _finder.bSrc.length) {
                                     // unsupported format
                                     _finder.found = false;
                                     _finder.vType = VT_NONE;
                                     return;
                                 }
-                                for (_m = 0; _m < 4; _m++) {
-                                    _nc = _finder.bSrc[_pos + _l + _m];
+                                for (_j = 0; _j < 4; _j++) {
+                                    _nc = _finder.bSrc[_pos + _i + _j];
                                     if ((_nc >= '0' && _nc <= '9') ||
                                         (_nc >= 'a' && _nc <= 'f') ||
                                         (_nc >= 'A' && _nc <= 'F')) {
@@ -114,7 +114,7 @@ library ValueFinder {
                                         return;
                                     }
                                 }
-                                _l += 4;
+                                _i += 4;
                             } else {
                                 // unsupported format
                                 _finder.found = false;
@@ -125,14 +125,14 @@ library ValueFinder {
                             break;  
                         }               
                     }
-                    if (_c == '"' && _l == 0) {
+                    if (_c == '"' && _i == 0) {
                         // unsupported format
                         _finder.found = false;
                         _finder.vType = VT_NONE;
                         return;
                     }
-                    _finder.keyLen = _pos + _l - _finder.keyStartPos; 
-                    _pos += _l + 1;
+                    _finder.keyLen = _pos + _i - _finder.keyStartPos; 
+                    _pos += _i + 1;
                     _state &=  ~ST_KEY_START;
                     _state |= ST_NAME_SEP_START;
                     continue;
@@ -159,22 +159,22 @@ library ValueFinder {
                 if (_c== '"') {
                     _pos++;
                     _finder.valueStartPos = _pos;
-                    for (_l = 0; _pos + _l < _finder.bSrc.length; _l++) {
-                        _nc = _finder.bSrc[_pos + _l];
+                    for (_i = 0; _pos + _i < _finder.bSrc.length; _i++) {
+                        _nc = _finder.bSrc[_pos + _i];
                         if (_nc <= 0x1f) {
                             // unsupported format
                             _finder.found = false;
                             _finder.vType = VT_NONE;
                             return;
                         } else if (_nc == '\\') {
-                            if (_pos + _l + 1 >= _finder.bSrc.length) {
+                            if (_pos + _i + 1 >= _finder.bSrc.length) {
                                 // unsupported format
                                 _finder.found = false;
                                 _finder.vType = VT_NONE;
                                 return;
                             }
-                            _l++;
-                            _nc = _finder.bSrc[_pos + _l];
+                            _i++;
+                            _nc = _finder.bSrc[_pos + _i];
                             if (_nc == '"' || 
                                 _nc == '\\' ||
                                 _nc == '/' ||
@@ -185,14 +185,14 @@ library ValueFinder {
                                 _nc == 't') {
                                 // pass
                             } else if (_nc == 'u') {
-                                if (_pos + _l + 4 >= _finder.bSrc.length) {
+                                if (_pos + _i + 4 >= _finder.bSrc.length) {
                                     // unsupported format
                                     _finder.found = false;
                                     _finder.vType = VT_NONE;
                                     return;
                                 }
-                                for (_m = 0; _m < 4; _m++) {
-                                    _nc = _finder.bSrc[_pos + _l + _m]; 
+                                for (_j = 0; _j < 4; _j++) {
+                                    _nc = _finder.bSrc[_pos + _i + _j]; 
                                     if ((_nc >= '0' && _nc <= '9') ||
                                         (_nc >= 'a' && _nc <= 'f') ||
                                         (_nc >= 'A' && _nc <= 'F')) {
@@ -204,7 +204,7 @@ library ValueFinder {
                                         return;
                                     }
                                 }
-                                _l += 4;
+                                _i += 4;
                             } else {
                                 // unsupported format
                                 _finder.found = false;
@@ -215,19 +215,19 @@ library ValueFinder {
                             break;  
                         }               
                     }
-                    if (_c == '"' && _l == 0) {
+                    if (_c == '"' && _i == 0) {
                         // unsupported format
                         _finder.found = false;
                         _finder.vType = VT_NONE;
                         return;
                     }
-                    _finder.valueLen = _pos + _l - _finder.valueStartPos; 
+                    _finder.valueLen = _pos + _i - _finder.valueStartPos; 
                     if (isKeymatch(_finder, _findKey)) {
                         _finder.found = true;
                         _finder.vType = VT_STRING;
                         return;
                     } 
-                    _pos += _l + 1;
+                    _pos += _i + 1;
                     _state &=  ~ST_VALUE_START;
                     _state |= ST_VALUE_SEP_START;
                     continue;
@@ -311,8 +311,8 @@ library ValueFinder {
                     // digit
                     _finder.valueStartPos = _pos;
                     _pos++;
-                    for (_l = 0; _pos + _l < _finder.bSrc.length; _l++) {
-                        _nc = _finder.bSrc[_pos + _l];
+                    for (_i = 0; _pos + _i < _finder.bSrc.length; _i++) {
+                        _nc = _finder.bSrc[_pos + _i];
                         if (_nc >= '0'  && _nc <= '9') {
                             continue;
                         } else if (_nc == '.' || _nc == '+' || _nc == 'e') {
@@ -323,19 +323,19 @@ library ValueFinder {
                         }
                         break;
                     }
-                    if ((_c == '-' || (_c >= '0' && _c <= '9')) && _l == 0) {
+                    if ((_c == '-' || (_c >= '0' && _c <= '9')) && _i == 0) {
                             // unsupported forrmat 
                             _finder.found = false;
                             _finder.vType = VT_NONE;
                             return;
                     }
-                    _finder.valueLen = _pos + _l - _finder.valueStartPos;
+                    _finder.valueLen = _pos + _i - _finder.valueStartPos;
                     if (isKeymatch(_finder, _findKey)) {
                         _finder.found = true;
                         _finder.vType = VT_INT;
                         return;
                     }
-                    _pos += _l;
+                    _pos += _i;
                     _state &=  ~ST_VALUE_START;
                     _state |= ST_VALUE_SEP_START;
                     continue;
@@ -456,7 +456,6 @@ library ValueFinder {
          }
     } 
     
-    
     function initFinder(string _src) internal returns (finder) {
        return  finder({
             bSrc: bytes(_src),
@@ -468,7 +467,6 @@ library ValueFinder {
             valueLen: 0
         });  
     } 
-    
     
     function findString(finder _finder, string _findKey) internal returns (bool, bool, string) {
         findValuePos(_finder, _findKey);
