@@ -2,8 +2,11 @@ pragma solidity ^0.4.11;
 
 import "./StandardToken.sol";
 import "./Ownable.sol";
+import "./ValueFinder.sol";
 
 contract ETicketToken is StandardToken, Ownable {
+    using ValueFinder for ValueFinder.finder;
+         
     string public name;
     string public symbol;
     uint public decimals;
@@ -27,12 +30,7 @@ contract ETicketToken is StandardToken, Ownable {
     struct publishEvent {
         uint publishTime;
         string name;
-        string description;
-        string tags;
-        string startDateTime;
-        string endDateTime;
-        string place;
-        string mapLink;
+        string attributes;
         uint maxPrice;
         uint8 status; // 1 stopped, 2 closed
         uint lastTicketGroupId;
@@ -51,8 +49,7 @@ contract ETicketToken is StandardToken, Ownable {
     // user
     struct user {
         string name;
-        string email;
-        string description;
+        string attributes;
         uint version;
     }
     mapping (address => user) users;
@@ -117,7 +114,7 @@ contract ETicketToken is StandardToken, Ownable {
         return getUserVersionByAddress(msg.sender);
     }
 
-    function getUser() returns (string, string, string, uint) {
+    function getUser() returns (string, string, uint) {
         return getUserByAddress(msg.sender);
     }
 
@@ -125,26 +122,40 @@ contract ETicketToken is StandardToken, Ownable {
         return users[_address].version;
     }
 
-    function getUserByAddress(address _address) userExists(_address) returns (string, string, string, uint) {
-        return (users[_address].name, users[_address].email, users[_address].description, users[_address].version);
+    function getUserByAddress(address _address) userExists(_address) returns (string, string, uint) {
+        return (users[_address].name, users[_address].attributes, users[_address].version);
     }
 
-    function createUser(string _name, string _email, string _description) userNotExists(msg.sender)  {
-        require(bytes(_name).length != 0 && bytes(_email).length != 0);
+    function createUser(string _name, string _attributes) userNotExists(msg.sender)  {
+        bool _found;
+        bool _isNull;
+        bytes memory _value;
+        require(bytes(_name).length != 0);
+        var finder = ValueFinder.initFinder(_attributes);
+        (_found, _isNull, _value) = finder.findString("email");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("description");
+        require(_found && !_isNull && _value.length != 0);
         users[msg.sender] = user({
             name: _name,
-            email: _email,
-            description: _description,
+            attributes: _attributes,
             version: 0
         });
     }
 
-    function modifyUser(string _name, string _email, string _description) userExists(msg.sender)  {
-        require(bytes(_name).length != 0 && bytes(_email).length != 0);
+    function modifyUser(string _name, string _attributes) userExists(msg.sender)  {
+        bool _found;
+        bool _isNull;
+        bytes memory _value;
+        require(bytes(_name).length != 0);
+        var finder = ValueFinder.initFinder(_attributes);
+        (_found, _isNull, _value) = finder.findString("email");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("description");
+        require(_found && !_isNull && _value.length != 0);
         var _user = users[msg.sender];
         _user.name = _name;
-        _user.email = _email;
-        _user.description = _description;
+        _user.attributes = _attributes;
         _user.version++;
     }
 
@@ -215,52 +226,75 @@ contract ETicketToken is StandardToken, Ownable {
         return publishEvents[_address][_eventId].version;
     }
 
-    // function getPublishEventByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, string, string, string, string, string, uint) {
-    //     var _event = publishEvents[_address][_eventId];
-    //     return (_event.name, _event.description, _event.tags, _event.startDateTime, _event.endDateTime, _event.place, _event.mapLink, _event.version);
-    // }
+    function getPublishEventByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, uint, uint) {
+        var _event = publishEvents[_address][_eventId];
+        return (_event.name, _event.attributes, _event.maxPrice, _event.version);
+    }
 
-    // function createPublishEvent(string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _maxPrice) userExists(msg.sender) returns (uint){
-    //     require(bytes(_name).length != 0);
-    //     var _user = users[msg.sender];
+    function createPublishEvent(string _name, string _attributes, uint _maxPrice) userExists(msg.sender) returns (uint){
+        bool _found;
+        bool _isNull;
+        bytes memory _value;
+        require(bytes(_name).length != 0);
+        var finder = ValueFinder.initFinder(_attributes);
+        (_found, _isNull, _value) = finder.findString("description");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("country");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("tags");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("startDateTime");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("endDateTime");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("place");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("mapUrl");
+        require(_found && !_isNull && _value.length != 0);
+        // create publish event
+        var _eventId = publishEvents[msg.sender].length;
+        publishEvents[msg.sender].push(publishEvent ({
+            publishTime: block.timestamp,
+            name: _name,
+            attributes: _attributes,
+            maxPrice: _maxPrice,
+            status: 0,
+            lastTicketGroupId: 0,
+            version:0
+        }));
 
-    //     // create publish event
-    //     var _eventId = _user.events.length;
-    //     users[msg.sender].events.push(publishEvent ({
-    //         publishTime: block.timestamp,
-    //         name: _name,
-    //         description: _description,
-    //         tags: _tags,
-    //         startDateTime: _startDateTime,
-    //         endDateTime: _endDateTime,
-    //         place: _place,
-    //         mapLink: _mapLink,
-    //         maxPrice: _maxPrice,
-    //         status: 0,
-    //         tickets: new publishEventTicket[](0),
-    //         lastTicketGroupId: 0,
-    //         version:0
-    //     }));
-
-    //     // for search
-    //     eventRefs.push(eventRef({
-    //         publisher: msg.sender,
-    //         eventId: _eventId
-    //     }));
+        // for search
+        eventRefs.push(eventRef({
+            publisher: msg.sender,
+            eventId: _eventId
+        }));
         
-    //     return _eventId;
-    // }
+        return _eventId;
+    }
 
-    function modifyPublishEvent(uint _eventId, string _name, string _description, string _tags, string _startDateTime, string _endDateTime, string _place, string _mapLink, uint _maxPrice) eventExists(msg.sender, _eventId)  {
-        require(bytes(name).length != 0);
+    function modifyPublishEvent(uint _eventId, string _name, string _attributes, uint _maxPrice) eventExists(msg.sender, _eventId)  {
+        bool _found;
+        bool _isNull;
+        bytes memory _value;
+        require(bytes(_name).length != 0);
+        var finder = ValueFinder.initFinder(_attributes);
+        (_found, _isNull, _value) = finder.findString("description");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("country");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("tags");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("startDateTime");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("endDateTime");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("place");
+        require(_found && !_isNull && _value.length != 0);
+        (_found, _isNull, _value) = finder.findString("mapUrl");
+        require(_found && !_isNull && _value.length != 0);
         var _event = publishEvents[msg.sender][_eventId];
         _event.name = _name;
-        _event.description = _description;
-        _event.tags = _tags;
-        _event.startDateTime = _startDateTime;
-        _event.endDateTime = _endDateTime;
-        _event.place = _place;
-        _event.mapLink = _mapLink;
+        _event.attributes = _attributes;
         _event.maxPrice = _maxPrice;
         _event.version++;
     }
