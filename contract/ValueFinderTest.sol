@@ -4,7 +4,7 @@ import "./ValueFinder.sol";
 
 contract ValueFinderTest {
  
-    string constant data = '{  "aaa" : "bbb" ,"a.b":"ttt", "null": null, b.h"  :  -4  ,  "ggg":6778, "rr":false,   "uu"  :  true}';
+    string constant data = '{  "aaa" : "bbb" ,"a.b":"ttt", \n \t \r  "null": null, "pppl" : "\u3057\u306d" ,"b.h"  :  -4  ,  "ggg":6778, "rr":false,   "uu"  :  true}';
     
     function getString1() returns (bool _found, bool _isNULL, string _value) {
         (_found, _isNULL, _value) = ValueFinder.findString(data, "aaa");
@@ -13,16 +13,20 @@ contract ValueFinderTest {
     function getString2() returns (bool _found, bool _isNULL, string _value) {
         (_found, _isNULL, _value) = ValueFinder.findString(data, "a.b");
     }   
-
+    
     function getString3() returns (bool _found, bool _isNULL, string _value) {
+        (_found, _isNULL, _value) = ValueFinder.findString(data, "pppl");
+    } 
+
+    function getString4() returns (bool _found, bool _isNULL, string _value) {
         (_found, _isNULL, _value) = ValueFinder.findString(data, "null");
     }   
 
-    function getString4() returns (bool _found, bool _isNULL, string _value) {
+    function getString5() returns (bool _found, bool _isNULL, string _value) {
         (_found, _isNULL, _value) = ValueFinder.findString(data, "b.h");
     }   
 
-    function getString5() returns (bool _found, bool _isNULL, string _value) {
+    function getString6() returns (bool _found, bool _isNULL, string _value) {
         (_found, _isNULL, _value) = ValueFinder.findString(data, "xxxx");
     }   
 
@@ -33,7 +37,19 @@ contract ValueFinderTest {
     function getInt2() returns (bool _found, bool _isNULL, int _value) {
         (_found, _isNULL, _value) = ValueFinder.findInt(data, "ggg");
     }   
+    
+    function getInt3() returns (bool _found, bool _isNULL, int _value) {
+        (_found, _isNULL, _value) = ValueFinder.findInt(data, "null");
+    }   
 
+    function getInt4() returns (bool _found, bool _isNULL, int _value) {
+        (_found, _isNULL, _value) = ValueFinder.findInt(data, "");
+    }   
+
+    function getInt5() returns (bool _found, bool _isNULL, int _value) {
+        (_found, _isNULL, _value) = ValueFinder.findInt(data, "XXXX");
+    }   
+    
     function getBool1() returns (bool _found, bool _isNULL, bool _value) {
         (_found, _isNULL, _value) = ValueFinder.findBool(data, "rr");
     }   
@@ -53,6 +69,4 @@ contract ValueFinderTest {
     function getBool5() returns (bool _found, bool _isNULL, bool _value) {
         (_found, _isNULL, _value) = ValueFinder.findBool(data, "XXX");
     }  
-    
-
 }
