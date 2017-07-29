@@ -246,7 +246,7 @@ library ValueFinder {
                     for (l = 0; _pos + l < _bSrc.length; l++) {
                         if (_bSrc[_pos + l] >= '0'  && _bSrc[_pos + l] <= '9') {
                             continue;
-                        } else if (_bSrc[_pos + l] == '.' || _bSrc[_pos + l] >= '+' || _bSrc[_pos + l] >= 'e') {
+                        } else if (_bSrc[_pos + l] == '.' || _bSrc[_pos + l] == '+' || _bSrc[_pos + l] == 'e') {
                             // unsupported forrmat 
                             return (false, T_V_INT, _pos, 0);
                         }
