@@ -4,8 +4,7 @@ import "./ValueFinder.sol";
 
 contract ValueFinderTest {
      using ValueFinder for ValueFinder.finder;
-    
- 
+
     string constant jsonSubset = '{  "aaa" : "bbb" ,"a.b":"ttt", \n \t \r  "null": null, "pppl" : "\u3057\u306d" ,"b.h"  :  -4  ,  "ggg":6778, "rr":false,   "uu"  :  true}';
     
     function getString1() returns (bool _found, bool _isNULL, string _value) {
@@ -87,6 +86,4 @@ contract ValueFinderTest {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findBool("XXX");
     }  
-    
-
 }
