@@ -22,7 +22,6 @@ contract ETicketToken is StandardToken, Ownable {
         address owner;
         bool sale;
         uint8 status; // 1 discard, 2 expired,
-        uint64 version;
     }
     mapping (address => mapping(uint => publishEventTicket[])) publishEventTickets;
 
@@ -34,7 +33,6 @@ contract ETicketToken is StandardToken, Ownable {
         uint maxPrice;
         uint lastTicketGroupId;
         uint8 status; // 1 stopped, 2 closed
-        uint64 version;
     }
     mapping (address => publishEvent[]) publishEvents;
 
@@ -50,7 +48,6 @@ contract ETicketToken is StandardToken, Ownable {
     struct user {
         string name;
         string attributes;
-        uint64 version;
     }
     mapping (address => user) users;
     uint usersCount;
@@ -97,7 +94,7 @@ contract ETicketToken is StandardToken, Ownable {
         _;
     }
 
-    function ETicket() {
+    function ETicketToken() {
         totalSupply = 6000000000000000;
         balances[msg.sender] = totalSupply;
         name = "ETicketToken";
@@ -110,12 +107,8 @@ contract ETicketToken is StandardToken, Ownable {
         return usersCount;
     }
 
-    function getUserVersion(address _address) userExists(_address) returns (uint64) {
-        return users[_address].version;
-    }
-
-    function getUser(address _address) userExists(_address) returns (string, string, uint64) {
-        return (users[_address].name, users[_address].attributes, users[_address].version);
+    function getUser(address _address) userExists(_address) returns (string, string) {
+        return (users[_address].name, users[_address].attributes);
     }
 
     function createUser(string _name, string _attributes) userNotExists(msg.sender)  {
@@ -130,8 +123,7 @@ contract ETicketToken is StandardToken, Ownable {
         require(_found && !_isNull && _value.length != 0);
         users[msg.sender] = user({
             name: _name,
-            attributes: _attributes,
-            version: 0
+            attributes: _attributes
         });
     }
 
@@ -148,7 +140,6 @@ contract ETicketToken is StandardToken, Ownable {
         var _user = users[msg.sender];
         _user.name = _name;
         _user.attributes = _attributes;
-        _user.version++;
     }
 
     // search operation
@@ -190,25 +181,19 @@ contract ETicketToken is StandardToken, Ownable {
         
     }
 
-
     // enter operation
     function enter() {
         
     }
-
 
     // publish event operation
     function getPublishEventsMaxId(address _address, uint _eventId) userExists(_address)returns (uint) {
         return publishEvents[_address].length - 1;
     }
 
-    function getPublishEventVersion(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint64) {
-        return publishEvents[_address][_eventId].version;
-    }
-
-    function getPublishEvent(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, uint, uint64) {
+    function getPublishEvent(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, uint) {
         var _event = publishEvents[_address][_eventId];
-        return (_event.name, _event.attributes, _event.maxPrice, _event.version);
+        return (_event.name, _event.attributes, _event.maxPrice);
     }
 
     function createPublishEvent(string _name, string _attributes, uint _maxPrice) userExists(msg.sender) returns (uint){
@@ -239,8 +224,7 @@ contract ETicketToken is StandardToken, Ownable {
             attributes: _attributes,
             maxPrice: _maxPrice,
             status: 0,
-            lastTicketGroupId: 0,
-            version:0
+            lastTicketGroupId: 0
         }));
         // for search
         eventRefs.push(eventRef({
@@ -275,13 +259,11 @@ contract ETicketToken is StandardToken, Ownable {
         _event.name = _name;
         _event.attributes = _attributes;
         _event.maxPrice = _maxPrice;
-        _event.version++;
     }
 
     function stopPublishEvent(uint _eventId) eventExists(msg.sender, _eventId) {
         var _event = publishEvents[msg.sender][_eventId];
         _event.status = 1;
-        _event.version++;
         // XXX haraimodoshi    最初に売った価格を現在の所有者に返却する
         // XXX ticket cancel
     }
@@ -289,18 +271,12 @@ contract ETicketToken is StandardToken, Ownable {
     function closePublishEvent(uint _eventId) eventExists(msg.sender, _eventId) {
         var _event = publishEvents[msg.sender][_eventId];
         _event.status = 2;
-        _event.version++;
         // XXX ticket expire
-
     }
 
     // publish event ticket operation
     function getPublishEventTicketsMaxId(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint) {
         return publishEventTickets[_address][_eventId].length - 1;
-    }
-
-    function getPublishEventTicketVersion(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint) {
-        return publishEventTickets[_address][_eventId][_ticketId].version;
     }
 
     // function getPublishEventTicketByAddress(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint, uint, bool, uint, address, uint8, uint) {
@@ -353,7 +329,6 @@ contract ETicketToken is StandardToken, Ownable {
     function discardPublichEventTicket() {
         
     }
-    
 }
 
 
