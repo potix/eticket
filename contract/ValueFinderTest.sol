@@ -7,32 +7,32 @@ contract ValueFinderTest {
 
     string constant jsonSubset = '{  "aaa" : "bbb" ,"a.b":"ttt", \n \t \r  "null": null, "pppl" : "\u3057\u306d" ,"b.h"  :  -4  ,  "ggg":6778, "rr":false,   "uu"  :  true}';
     
-    function getString1() returns (bool _found, bool _isNULL, string _value) {
+    function getString1() returns (bool _found, bool _isNULL, bytes _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findString("aaa");
     }   
     
-    function getString2() returns (bool _found, bool _isNULL, string _value) {
+    function getString2() returns (bool _found, bool _isNULL, bytes _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findString("a.b");
     }   
     
-    function getString3() returns (bool _found, bool _isNULL, string _value) {
+    function getString3() returns (bool _found, bool _isNULL, bytes _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findString("pppl");
     } 
 
-    function getString4() returns (bool _found, bool _isNULL, string _value) {
+    function getString4() returns (bool _found, bool _isNULL, bytes _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findString("null");
     }   
 
-    function getString5() returns (bool _found, bool _isNULL, string _value) {
+    function getString5() returns (bool _found, bool _isNULL, bytes _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findString("b.h");
     }   
 
-    function getString6() returns (bool _found, bool _isNULL, string _value) {
+    function getString6() returns (bool _found, bool _isNULL, bytes _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findString("xxxx");
     }   

@@ -365,7 +365,7 @@ library ValueFinder {
         return;
     }
     
-    function convertString (finder _finder) private returns (string) {
+    function convertString (finder _finder) private returns (bytes) {
         bytes memory _newBValue = new bytes(_finder.valueLen);
         uint _i;
         uint _j;
@@ -416,7 +416,7 @@ library ValueFinder {
                 _newBValue[_k++] = _c; 
             }
         }
-        return string(_newBValue);
+        return _newBValue;
     } 
 
     function convertInt (finder _finder) private returns (int) {
@@ -468,17 +468,17 @@ library ValueFinder {
         });  
     } 
     
-    function findString(finder _finder, string _findKey) internal returns (bool, bool, string) {
+    function findString(finder _finder, string _findKey) internal returns (bool, bool, bytes) {
         findValuePos(_finder, _findKey);
         if (!_finder.found) {
-            return (false, false, "");
+            return (false, false, new bytes(0));
         }
         if (_finder.found && _finder.vType == VT_STRING) {
             return (true, false, convertString(_finder));
         } else if (_finder.found && _finder.vType == VT_NULL) {
-            return (true, true, "");
+            return (true, true, new bytes(0));
         } else {
-            return (false, false, "");
+            return (false, false, new bytes(0));
         }
     }
 
