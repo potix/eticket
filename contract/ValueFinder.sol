@@ -90,6 +90,7 @@ library ValueFinder {
                                 _bSrc[_pos + l] == 'n' ||
                                 _bSrc[_pos + l] == 'r' ||
                                 _bSrc[_pos + l] == 't') {
+                                // pass
                             } else if (_bSrc[_pos + l] == 'u') {
                                 if (_pos + l + 4 >= _bSrc.length) {
                                         // unsupported format
@@ -160,11 +161,7 @@ library ValueFinder {
                                 _bSrc[_pos + l] == 'n' ||
                                 _bSrc[_pos + l] == 'r' ||
                                 _bSrc[_pos + l] == 't') {
-                                if (_pos + l + 1 >= _bSrc.length) {
-                                        // unsupported format
-                                        return (false, T_V_STRING, _pos, 0);
-                                }
-                                l++;
+                                // pass
                             } else if (_bSrc[_pos + l] == 'u') {
                                 if (_pos + l + 4 >= _bSrc.length) {
                                         // unsupported format
@@ -386,53 +383,49 @@ library ValueFinder {
     
     function getString(string _src, string _findKey) internal returns (bool, bool, string) {
             bool _found;
-            uint8 _valueType;
+            uint8 _type;
             uint _valuePos;
             uint _valueLen;
-            (_found, _valueType, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            (_found, _type, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
                 return (false, false, "");
             }
-            if (_found && _valueType != T_V_STRING && _valueType != T_V_NULL) {
+            if (_found && _type != T_V_STRING && _type != T_V_NULL) {
                 return (false, false, "");
-            } else if (_found && _valueType == T_V_NULL) {
+            } else if (_found && _type == T_V_NULL) {
                 return (true, true, "");
             }
     }
 
     function getInt(string _src, string _findKey) internal returns (bool, bool, string) {
             bool _found;
-            uint8 _valueType;
+            uint8 _type;
             uint _valuePos;
             uint _valueLen;
-            (_found, _valueType, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            (_found, _type, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
                 return (false, false, "");
             }   
-            if (_found && _valueType != T_V_INT && _valueType != T_V_NULL) {
+            if (_found && _type != T_V_INT && _type != T_V_NULL) {
                 return (false, false, "");
-            } else if (_found && _valueType == T_V_NULL) {
+            } else if (_found && _type == T_V_NULL) {
                 return (true, true, "");
             }
     }
 
     function getBool(string _src, string _findKey) internal returns (bool, bool, string) {
             bool _found;
-            uint8 _valueType;
+            uint8 _type;
             uint _valuePos;
             uint _valueLen;
-            (_found, _valueType, _valuePos, _valueLen) = findValuePos(_src, _findKey);
+            (_found, _type, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
                 return (false, false, "");
             }    
-            if (_found && _valueType != T_V_BOOL && _valueType != T_V_NULL) {
+            if (_found && _type != T_V_BOOL && _type != T_V_NULL) {
                 return (false, false, "");
-            } else if (_found && _valueType == T_V_NULL) {
+            } else if (_found && _type == T_V_NULL) {
                 return (true, true, "");
             }
     }
-    
-    
 }
-
-
