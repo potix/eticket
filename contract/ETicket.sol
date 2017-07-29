@@ -16,13 +16,13 @@ contract ETicketToken is StandardToken, Ownable {
     struct publishEventTicket {
         uint ticketGroupId;
         uint salePrice;
-        bool sale;
         bytes commemoration;
         uint firstSoldPrice;
         address publisher;
         address owner;
+        bool sale;
         uint8 status; // 1 discard, 2 expired,
-        uint version;
+        uint64 version;
     }
     mapping (address => mapping(uint => publishEventTicket[])) publishEventTickets;
 
@@ -32,9 +32,9 @@ contract ETicketToken is StandardToken, Ownable {
         string name;
         string attributes;
         uint maxPrice;
-        uint8 status; // 1 stopped, 2 closed
         uint lastTicketGroupId;
-        uint version;
+        uint8 status; // 1 stopped, 2 closed
+        uint64 version;
     }
     mapping (address => publishEvent[]) publishEvents;
 
@@ -50,7 +50,7 @@ contract ETicketToken is StandardToken, Ownable {
     struct user {
         string name;
         string attributes;
-        uint version;
+        uint64 version;
     }
     mapping (address => user) users;
     uint usersCount;
@@ -110,19 +110,11 @@ contract ETicketToken is StandardToken, Ownable {
         return usersCount;
     }
 
-    function getUserVersion() returns (uint) {
-        return getUserVersionByAddress(msg.sender);
-    }
-
-    function getUser() returns (string, string, uint) {
-        return getUserByAddress(msg.sender);
-    }
-
-    function getUserVersionByAddress(address _address) userExists(_address) returns (uint) {
+    function getUserVersion(address _address) userExists(_address) returns (uint64) {
         return users[_address].version;
     }
 
-    function getUserByAddress(address _address) userExists(_address) returns (string, string, uint) {
+    function getUser(address _address) userExists(_address) returns (string, string, uint64) {
         return (users[_address].name, users[_address].attributes, users[_address].version);
     }
 
@@ -134,7 +126,7 @@ contract ETicketToken is StandardToken, Ownable {
         var finder = ValueFinder.initFinder(_attributes);
         (_found, _isNull, _value) = finder.findString("email");
         require(_found && !_isNull && _value.length != 0);
-        (_found, _isNull, _value) = finder.findString("description");
+        (_found, _isNull, _value) = finder.findString("profile");
         require(_found && !_isNull && _value.length != 0);
         users[msg.sender] = user({
             name: _name,
@@ -151,7 +143,7 @@ contract ETicketToken is StandardToken, Ownable {
         var finder = ValueFinder.initFinder(_attributes);
         (_found, _isNull, _value) = finder.findString("email");
         require(_found && !_isNull && _value.length != 0);
-        (_found, _isNull, _value) = finder.findString("description");
+        (_found, _isNull, _value) = finder.findString("profile");
         require(_found && !_isNull && _value.length != 0);
         var _user = users[msg.sender];
         _user.name = _name;
@@ -206,27 +198,15 @@ contract ETicketToken is StandardToken, Ownable {
 
 
     // publish event operation
-    function getPublishEventsMaxId(uint _eventId) returns (uint) {
-        return getPublishEventsMaxIdByAddress(msg.sender, _eventId);
-    }
-
-    function getPublishEventVersion(uint _eventId)  returns (uint) {
-        return getPublishEventVersionByAddress(msg.sender, _eventId);
-    }
-
-    // function getPublishEvent(uint _eventId) returns (string, string, string, string, string, string, string, uint) {
-    //     return getPublishEventByAddress(msg.sender, _eventId);
-    // }
-
-    function getPublishEventsMaxIdByAddress(address _address, uint _eventId) userExists(_address)returns (uint) {
+    function getPublishEventsMaxId(address _address, uint _eventId) userExists(_address)returns (uint) {
         return publishEvents[_address].length - 1;
     }
 
-    function getPublishEventVersionByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint) {
+    function getPublishEventVersion(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint64) {
         return publishEvents[_address][_eventId].version;
     }
 
-    function getPublishEventByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, uint, uint) {
+    function getPublishEvent(address _address, uint _eventId) eventExists(_address, _eventId) returns (string, string, uint, uint64) {
         var _event = publishEvents[_address][_eventId];
         return (_event.name, _event.attributes, _event.maxPrice, _event.version);
     }
@@ -262,7 +242,6 @@ contract ETicketToken is StandardToken, Ownable {
             lastTicketGroupId: 0,
             version:0
         }));
-
         // for search
         eventRefs.push(eventRef({
             publisher: msg.sender,
@@ -316,23 +295,11 @@ contract ETicketToken is StandardToken, Ownable {
     }
 
     // publish event ticket operation
-    function getPublishEventTicketsMaxId(uint _eventId)  returns (uint) {
-        return getPublishEventTicketsMaxIdByAddress(msg.sender, _eventId);
-    }
-
-    function getPublishEventTicketVersion(uint _eventId, uint _ticketId) returns (uint) {
-        return getPublishEventTicketVersionByAddress(msg.sender, _eventId, _ticketId);
-    }
-
-    // function getPublishEventTicket(uint _eventId, uint _ticketId) returns (uint, uint, bool, uint, address, uint8, uint) {
-    //     return getPublishEventTicketByAddress(msg.sender, _eventId, _ticketId);
-    // }
-
-    function getPublishEventTicketsMaxIdByAddress(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint) {
+    function getPublishEventTicketsMaxId(address _address, uint _eventId) eventExists(_address, _eventId) returns (uint) {
         return publishEventTickets[_address][_eventId].length - 1;
     }
 
-    function getPublishEventTicketVersionByAddress(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint) {
+    function getPublishEventTicketVersion(address _address, uint _eventId, uint _ticketId) ticketExists(_address, _eventId, _ticketId) returns (uint) {
         return publishEventTickets[_address][_eventId][_ticketId].version;
     }
 
