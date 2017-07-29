@@ -390,42 +390,48 @@ library ValueFinder {
             if (!_found) {
                 return (false, false, "");
             }
-            if (_found && _type != T_V_STRING && _type != T_V_NULL) {
-                return (false, false, "");
+            if (_found && _type == T_V_STRING) {
+                return (true, false, convertString(_src, _valuePos, _valueLen));
             } else if (_found && _type == T_V_NULL) {
                 return (true, true, "");
+            } else {
+                return (false, false, "");
             }
     }
 
-    function getInt(string _src, string _findKey) internal returns (bool, bool, string) {
+    function getInt(string _src, string _findKey) internal returns (bool, bool, int) {
             bool _found;
             uint8 _type;
             uint _valuePos;
             uint _valueLen;
             (_found, _type, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
-                return (false, false, "");
+                return (false, false, 0);
             }   
-            if (_found && _type != T_V_INT && _type != T_V_NULL) {
-                return (false, false, "");
+            if (_found && _type == T_V_INT) {
+                return (true, false, convertInt(_src, _valuePos, _valueLen));
             } else if (_found && _type == T_V_NULL) {
-                return (true, true, "");
+                return (true, true, 0);
+            } else {
+                return (false, false, 0);
             }
     }
 
-    function getBool(string _src, string _findKey) internal returns (bool, bool, string) {
+    function getBool(string _src, string _findKey) internal returns (bool, bool, bool) {
             bool _found;
             uint8 _type;
             uint _valuePos;
             uint _valueLen;
             (_found, _type, _valuePos, _valueLen) = findValuePos(_src, _findKey);
             if (!_found) {
-                return (false, false, "");
+                return (false, false, false);
             }    
-            if (_found && _type != T_V_BOOL && _type != T_V_NULL) {
-                return (false, false, "");
+            if (_found && _type == T_V_BOOL) {
+                return (true, false, convertBool(_src, _valuePos, _valueLen));
             } else if (_found && _type == T_V_NULL) {
-                return (true, true, "");
+                return (true, true, false);
+            } else {
+                return (false, false, false);
             }
     }
 }
