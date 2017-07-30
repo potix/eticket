@@ -13,8 +13,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
     uint public decimals;
     uint public totalSupply;
 
-    uint8 constant TS_VALID  = 1;
-    uint8 constant TS_JOINED = 2;
+    uint8 constant TS_BUY  = 1;
+    uint8 constant TS_JOIN = 2;
 
     uint8 constant ES_OPENED  = 1;
     uint8 constant ES_STOPPED = 2;
@@ -22,9 +22,11 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     // publish ticket
     struct publishEventTicket {
+        uint    groupId;
         address owner;
-        uint32  firstSoldPrice;
+        int64   firstSoldPrice;
         uint32  price;
+        string  buyOraclizeResponse;
         string  joinOraclizeResponse;
         uint32  buyCode;
         uint32  joinCode;
@@ -42,6 +44,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         string joinOraclizeUrl;
         uint32 maxPrice;
         uint8  status;
+        uint groupCount;
         uint64 version;
     }
     mapping (address => publishEvent[]) publishEvents;
@@ -117,6 +120,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
         require(_ticketId < _tickets.length);
         require(_tickets[_ticketId].owner != address(0));
         _;
+    }
+    
+    function getRandomCode() private returns (uint32){ 
+        return uint32(getRandom() % 4294967291);
     }
 
     function ETicketToken() {
@@ -199,7 +206,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
             attributes: _attributes,
             version:  0
         });
-        // search for user
+        // create user ref
         userRefs.push(userRef({
             user: msg.sender
         }));
@@ -230,9 +237,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     function getPublishEvent(address _address, uint _eventId) 
     eventExists(_address, _eventId) 
-    returns (string, string, uint32, uint8, uint64) {
+    returns (string, string, uint32, uint8, uint, uint64) {
         var _event = publishEvents[_address][_eventId];
-        return (_event.name, _event.attributes, _event.maxPrice, _event.status, _event.version);
+        return (_event.name, _event.attributes, _event.maxPrice, _event.status, _event.groupCount, _event.version);
     }
 
     function createPublishEvent(string _name, string _attributes, uint32 _maxPrice) 
@@ -263,9 +270,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
             joinOraclizeUrl: "",
             maxPrice :_maxPrice,
             status: ES_OPENED,
+            groupCount: 0,
             version: 0
         }));
-        // search for event
+        // create event ticket ref
         eventRefs.push(eventRef({
             publisher: msg.sender,
             eventId: _eventId
@@ -351,63 +359,69 @@ contract ETicketToken is StandardToken, Ownable, Random {
     ticketExists(_address, _eventId, _ticketId)
     returns (uint32, string, uint32, uint32, uint8, bool, uint64) {
         var _ticket = publishEventTickets[_address][_eventId][_ticketId];
+        require(_address == msg.sender || _address == _ticket.owner);
         return (_ticket.price, _ticket.joinOraclizeResponse, _ticket.buyCode, _ticket.joinCode, _ticket.status, _ticket.sale, _ticket.version);
     }
 
     function getExtraPublishEventTicket(uint _eventId, uint _ticketId) 
     ticketExists(msg.sender, _eventId, _ticketId) 
-    returns (uint32, address, uint64) {
+    returns (int64, address, string, uint64) {
         var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
-        return (_ticket.firstSoldPrice, _ticket.owner, _ticket.version);
+        return (_ticket.firstSoldPrice, _ticket.owner,  _ticket.buyOraclizeResponse, _ticket.version);
     }
 
-    function createPublishEventTicketGroup(uint _eventId, uint _unit, uint _amount, uint _price) eventExists(msg.sender, _eventId)  returns (uint) {
-        require(_unit != 0 && _amount != 0);
-        var _event = users[msg.sender].events[_eventId];
+    function createPublishEventTicketGroup(uint _eventId, uint _amount, uint32 _price) 
+    eventExists(msg.sender, _eventId) {
+        require(_amount != 0);
+        var _event = publishEvents[msg.sender][_eventId];
         require(_price <= _event.maxPrice);
-        var _total = 0;
+        var _groupId = _event.groupCount;
         for (uint i = 0; i < _amount; i++) {
-            var _ticketGroupId = _event.lastTicketGroupId;
-            for (uint j = 0; j < _unit; j++) {
-                // create publish event ticket
-                var _ticketId = _event.tickets.length;
-                _event.tickets.push(publishEventTicket({
-                    ticketGroupId: _ticketGroupId,
-                    salePrice: _price,
-                    sale: true,
-                    firstSoldPrice: 0,
-                    commemoration: new bytes(0),
-                    publisher: msg.sender,
-                    owner: msg.sender,
-                    status: 0,
-                    version: 0
-                }));
-                // create user ticket ref
-                users[msg.sender].ticketRefs.push(userTicketRef ({
-                    publisher: msg.sender,
-                    eventId: _eventId,
-                    ticketId: _ticketId
-                }));
-                _total++;
-            }
-            _event.lastTicketGroupId++;
+            var _ticketId = publishEventTickets[msg.sender][_eventId].length;
+            publishEventTickets[msg.sender][_eventId].push(publishEventTicket({
+                groupId: _groupId,
+                owner: msg.sender,
+                firstSoldPrice: -1,
+                price: _price,
+                buyOraclizeResponse: "",
+                joinOraclizeResponse: "",
+                buyCode : getRandomCode(),
+                joinCode : getRandomCode(),
+                status: TS_BUY,
+                sale: true,
+                version: 0
+            }));
+            // create user ticket ref
+            userTicketRefs[msg.sender].push(userTicketRef ({
+                publisher: msg.sender,
+                eventId: _eventId,
+                ticketId: _ticketId
+            }));
+            _event.groupCount++;
         }
-        return _total;
     }
 
-    
-    
-    
-    
-    
-        // ticket operation
-    function getTickets() {
-        
+    function getSummaryPublishEventTickets() {
+        // validCount
+        // joinCount
+        // maxprice
+        // minprice
+        // totalPrice
+        // ticketCount
     }
     
+    
+    
+    
+    // ticket operation
     function buyTicket() {
         
     }
+
+    function buyTicketWithCode() {
+        
+    }
+
 
     function buyTicketGroup() {
 
