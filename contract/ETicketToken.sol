@@ -348,8 +348,6 @@ contract ETicketToken is StandardToken, Ownable, Random {
         _event.version++;
     }
 
-
-
     // publish event ticket operation
     function getPublishEventTicketsMaxId(address _address, uint _eventId)
     eventExists(_address, _eventId)
@@ -357,13 +355,31 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return publishEventTickets[_address][_eventId].length - 1;
     }
 
-    function getPublishEventTicket(address _address, uint _eventId, uint _ticketId) 
+    function getOraclizeResponsePublishEventTicket(address _address, uint _eventId, uint _ticketId) 
     ticketExists(_address, _eventId, _ticketId)
-    returns (uint, uint32, string, uint32, uint32, uint8, bool, uint64) {
+    returns (string, uint64) {
         var _ticket = publishEventTickets[_address][_eventId][_ticketId];
         require(_address == msg.sender || _address == _ticket.owner);
-        return (_ticket.groupId, _ticket.price, _ticket.enterOraclizeResponse, _ticket.joinCode, _ticket.enterCode, _ticket.status, _ticket.sale, _ticket.version);
+        return (_ticket.groupId, _ticket.price, _ticket.enterOraclizeResponse, _ticket.status, _ticket.sale, _ticket.version);
     }
+
+
+    function getPublishEventTicket(address _address, uint _eventId, uint _ticketId) 
+    ticketExists(_address, _eventId, _ticketId)
+    returns (uint, uint32, uint8, bool, uint64) {
+        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
+        require(_address == msg.sender || _address == _ticket.owner);
+        return (_ticket.groupId, _ticket.price, _ticket.status, _ticket.sale, _ticket.version);
+    }
+
+    function getCodePublishEventTicket(address _address, uint _eventId, uint _ticketId) 
+    ticketExists(_address, _eventId, _ticketId)
+    returns (uint32, uint32, uint64) {
+        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
+        require(_address == msg.sender || _address == _ticket.owner);
+        return (_ticket.joinCode, _ticket.enterCode, _ticket.version);
+    }
+
 
     function getExtraPublishEventTicket(uint _eventId, uint _ticketId) 
     ticketExists(msg.sender, _eventId, _ticketId) 
