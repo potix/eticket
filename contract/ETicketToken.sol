@@ -13,8 +13,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
     uint public decimals;
     uint public totalSupply;
 
-    uint8 constant TS_BUY  = 1;
-    uint8 constant TS_JOIN = 2;
+    uint8 constant TS_BUY   = 1;
+    uint8 constant TS_JOIN  = 2;
+    uint8 constant TS_ENTER = 3;
+
 
     uint8 constant ES_OPENED  = 1;
     uint8 constant ES_STOPPED = 2;
@@ -27,9 +29,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
         int64   firstSoldPrice;
         uint32  price;
         string  buyOraclizeResponse;
-        string  joinOraclizeResponse;
-        uint32  buyCode;
+        string  enterOraclizeResponse;
         uint32  joinCode;
+        uint32  enterCode;
         uint8   status;
         bool    sale;
         uint64  version;
@@ -41,7 +43,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         string name;
         string attributes;
         string buyOraclizeUrl;
-        string joinOraclizeUrl;
+        string enterOraclizeUrl;
         uint32 maxPrice;
         uint8  status;
         uint groupCount;
@@ -267,7 +269,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
             name: _name,
             attributes: _attributes,
             buyOraclizeUrl: "",
-            joinOraclizeUrl: "",
+            enterOraclizeUrl: "",
             maxPrice :_maxPrice,
             status: ES_OPENED,
             groupCount: 0,
@@ -310,14 +312,14 @@ contract ETicketToken is StandardToken, Ownable, Random {
     eventExists(msg.sender, _eventId) 
     returns (string, string) {
         var _event = publishEvents[msg.sender][_eventId];
-        return (_event.buyOraclizeUrl, _event.joinOraclizeUrl);
+        return (_event.buyOraclizeUrl, _event.enterOraclizeUrl);
     }
     
-    function setOraclizeUrlPublishEvent(uint _eventId, string _buyOraclizeUrl, string _joinOraclizeUrl)
+    function setOraclizeUrlPublishEvent(uint _eventId, string _buyOraclizeUrl, string _enterOraclizeUrl)
     eventExists(msg.sender, _eventId) {
         var _event = publishEvents[msg.sender][_eventId];
         _event.buyOraclizeUrl = _buyOraclizeUrl;
-        _event.joinOraclizeUrl = _joinOraclizeUrl;
+        _event.enterOraclizeUrl = _enterOraclizeUrl;
     }
     
     function stopPublishEvent(uint _eventId) 
@@ -360,7 +362,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     returns (uint, uint32, string, uint32, uint32, uint8, bool, uint64) {
         var _ticket = publishEventTickets[_address][_eventId][_ticketId];
         require(_address == msg.sender || _address == _ticket.owner);
-        return (_ticket.groupId, _ticket.price, _ticket.joinOraclizeResponse, _ticket.buyCode, _ticket.joinCode, _ticket.status, _ticket.sale, _ticket.version);
+        return (_ticket.groupId, _ticket.price, _ticket.enterOraclizeResponse, _ticket.joinCode, _ticket.enterCode, _ticket.status, _ticket.sale, _ticket.version);
     }
 
     function getExtraPublishEventTicket(uint _eventId, uint _ticketId) 
@@ -384,9 +386,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
                 firstSoldPrice: -1,
                 price: _price,
                 buyOraclizeResponse: "",
-                joinOraclizeResponse: "",
-                buyCode : getRandomCode(),
+                enterOraclizeResponse: "",
                 joinCode : 0,
+                enterCode : 0,
                 status: TS_BUY,
                 sale: true,
                 version: 0
