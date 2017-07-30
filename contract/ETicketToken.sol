@@ -355,15 +355,6 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return publishEventTickets[_address][_eventId].length - 1;
     }
 
-    function getOraclizeResponsePublishEventTicket(address _address, uint _eventId, uint _ticketId) 
-    ticketExists(_address, _eventId, _ticketId)
-    returns (string, uint64) {
-        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
-        require(_address == msg.sender || _address == _ticket.owner);
-        return (_ticket.groupId, _ticket.price, _ticket.enterOraclizeResponse, _ticket.status, _ticket.sale, _ticket.version);
-    }
-
-
     function getPublishEventTicket(address _address, uint _eventId, uint _ticketId) 
     ticketExists(_address, _eventId, _ticketId)
     returns (uint, uint32, uint8, bool, uint64) {
@@ -380,6 +371,13 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return (_ticket.joinCode, _ticket.enterCode, _ticket.version);
     }
 
+    function getOraclizeResponsePublishEventTicket(address _address, uint _eventId, uint _ticketId) 
+    ticketExists(_address, _eventId, _ticketId)
+    returns (string, uint64) {
+        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
+        require(_address == msg.sender || _address == _ticket.owner);
+        return (_ticket.enterOraclizeResponse, _ticket.version);
+    }
 
     function getExtraPublishEventTicket(uint _eventId, uint _ticketId) 
     ticketExists(msg.sender, _eventId, _ticketId) 
@@ -419,47 +417,107 @@ contract ETicketToken is StandardToken, Ownable, Random {
         }
     }
 
-    function getSummaryPublishEventTickets() {
-        // validCount
-        // joinCount
-        // maxprice
-        // minprice
-        // totalPrice
-        // ticketCount
+    function getSummaryPublishEventTickets(address _address, uint _eventId)
+    eventExists(msg.sender, _eventId) 
+    returns (uint _ticketCount, uint _buyCount, uint _joinCount, uint _enterCount, uint _totalSoldPrice, uint32 _minPrice, uint32 _maxPrice) {
+        _ticketCount = 0;
+        _buyCount = 0;
+        _joinCount = 0;
+        _enterCount = 0;
+        _totalSoldPrice = 0;
+        _minPrice = 0xffffffff;
+        _maxPrice = 0;
+        for (uint i; i < publishEventTickets[msg.sender][_eventId].length; i++) {
+            var _ticket = publishEventTickets[msg.sender][_eventId][i];
+            _ticketCount++;
+            if (_ticket.status == TS_BUY) {
+                _buyCount++;                
+            }  else if (_ticket.status == TS_JOIN) {
+                _joinCount++;                
+            }  else if (_ticket.status == TS_ENTER) {
+                _enterCount++;                
+            }
+            if (_ticket.price < _minPrice) {
+                _minPrice = _ticket.price;
+            } else if (_ticket.price > _maxPrice) {
+                _maxPrice = _ticket.price;
+            }
+            if (_ticket.firstSoldPrice != -1) {
+                _totalSoldPrice += uint(_ticket.firstSoldPrice);
+            }
+        }
     }
-    
-    
-    
     
     // ticket operation
-    function buyTicket() {
+    uint8 constant BUY_OPT_ENABLE_GROUP = 0x01;
+    uint8 constant BUY_OPT_ENABLE_CODE  = 0x02;
+    uint8 constant BUY_OPT_ENABLE_PRICE = 0x04;
+    uint8 constant BUY_OPT_CONTINUOUS   = 0x08;
+    
+    
+    function buyTicket(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 minPrice, uint32 maxPrice) {
         
     }
 
-    function buyTicketWithCode() {
-        
+    function changePriceTicket(address _publisher, uint _eventId, uint _ticketId, uint _price) 
+    ticketExists(_publisher, _eventId, _ticketId) {
+        var _event = publishEventTickets[msg.sender][_eventId]
+        var _ticket = publishEventTickets[msg.sender][_eventId][i];
+        require(_event.status == ES_OPENED)
+        require(_ticket.owner == msg.sender)
+        require(_ticket.status == TS_BUY)
+        _ticket.price = _price;
+        _ticket.version++;
+    }
+
+    function sellTicket(address _publisher, uint _eventId, uint _ticketId) 
+    ticketExists(_publisher, _eventId, _ticketId) {
+        var _event = publishEventTickets[msg.sender][_eventId]
+        var _ticket = publishEventTickets[msg.sender][_eventId][i];
+        require(_event.status == ES_OPENED)
+        require(_ticket.owner == msg.sender)
+        require(_ticket.status == TS_BUY)
+        _ticket.sale = true;
+        _ticket.version++;
+    }  
+
+    function cancelTicket(address _publisher, uint _eventId, uint _ticketId) 
+    ticketExists(_publisher, _eventId, _ticketId) {
+        var _event = publishEventTickets[msg.sender][_eventId]
+        var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
+        require(_event.status == ES_OPENED)
+        require(_ticket.owner == msg.sender)
+        require(_ticket.status == TS_BUY)
+        balances[msg.sender] += _ticket.firstSoldPrice;        
+        balances[_publisher] -= _ticket.firstSoldPrice;        
+        _ticket.price = _ticket.firstSoldPrice;
+        _ticket.sale = true;
+        _ticket.owner = _publisher;
+        _ticket.version++;
+    }
+
+    function transferTicket(address _publisher, uint _eventId, uint _ticketId, address _to)
+    ticketExists(_publisher, _eventId, _ticketId) {
+        var _event = publishEventTickets[msg.sender][_eventId]
+        var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
+        require(_event.status == ES_OPENED)
+        require(_ticket.owner == msg.sender)
+        require(_ticket.status == TS_BUY)
+        _ticket.sale = false;
+        _ticket.owner = _to;
+        _ticket.version++;
     }
 
 
-    function buyTicketGroup() {
 
-    }
 
-    function sellTicket(uint _price) {
-        // publisherでなければmaxpriceを超えた価格を設定できない
-        // publisherであればmaxpriceを変更できる
-    }
-
-    function transferTicket() {
-        
-    }
-
-    function cancelTicket() {
-        
-    }
 
 
     // enter operation
+    function join() {
+        
+    }
+    
     function enter() {
         
     }
