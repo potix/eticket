@@ -46,14 +46,6 @@ contract ETicketToken is StandardToken, Ownable, Random {
     }
     mapping (address => publishEvent[]) publishEvents;
 
-    // ticket
-    struct userTicketRef {
-        address publisher;
-        uint    eventId;
-        uint    ticketId;
-    }
-    mapping (address => userTicketRef[]) userTicketRefs;
-
     // user
     struct user {
         string name;
@@ -70,10 +62,18 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     // search for event
     struct eventRef {
-        address user;
+        address publisher;
         uint eventId;
     }
     eventRef[] eventRefs;
+
+    // search for user ticket
+    struct userTicketRef {
+        address publisher;
+        uint    eventId;
+        uint    ticketId;
+    }
+    mapping (address => userTicketRef[]) userTicketRefs;
 
     modifier userRefExists(uint _userRefId) {
         require(_userRefId < userRefs.length);
@@ -84,7 +84,12 @@ contract ETicketToken is StandardToken, Ownable, Random {
         require(_eventRefId < eventRefs.length);
         _;
     }
-
+    
+    modifier userTicketRefExists(address _address, uint _userTicketRefId) {
+        require(_userTicketRefId < userTicketRefs[_address].length);
+        _;
+    }
+    
     modifier userExists(address _address) {
         require(bytes(users[_address].name).length != 0);
         _;
@@ -123,6 +128,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     }
 
 
+
     // user ref operation
     function getUserRefsMaxId() 
     returns (uint) {
@@ -132,10 +138,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
     function getUserRef(uint _userRefId) 
     userRefExists(_userRefId) 
     returns (address) {
-        require(_userRefId < userRefs.length);
         var _user = userRefs[_userRefId].user;
         return _user;        
     }
+    
     
 
     // event ref operation
@@ -147,11 +153,30 @@ contract ETicketToken is StandardToken, Ownable, Random {
     function getEventRef(uint _eventRefId) 
     eventRefExists(_eventRefId) 
     returns (address, uint) {
-        require(_eventRefId < eventRefs.length);
-        var _user = eventRefs[_eventRefId].user;
-        var _eventId = eventRefs[_eventRefId].eventId;
-        return (_user, _eventId);        
+        var eventRef = eventRefs[_eventRefId];
+        var _publisher = eventRef.publisher;
+        var _eventId = eventRef.eventId;
+        return (_publisher, _eventId);        
     }
+
+
+
+    // user ticket ref operation
+    function getUserTicketRefsMaxId()
+    returns (uint) {
+        return userTicketRefs[msg.sender].length - 1;
+    }
+
+    function getUserTicketRef(uint _userTicketRefId) 
+    userTicketRefExists(msg.sender, _userTicketRefId) 
+    returns (address, uint, uint) {
+        var userTicketRef =  userTicketRefs[msg.sender][_userTicketRefId];
+        var _publisher = userTicketRef.publisher;
+        var _eventId = userTicketRef.eventId;
+        var _ticketId = userTicketRef.eventId;
+        return (_publisher, _eventId, _ticketId);        
+    }
+
 
 
     // user operation
@@ -193,6 +218,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
         _user.attributes = _attributes;
         _user.version++;
     }
+
+
 
     // publish event operation
     function getPublishEventsMaxId(address _address, uint _eventId) 
@@ -240,7 +267,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         }));
         // search for event
         eventRefs.push(eventRef({
-            user: msg.sender,
+            publisher: msg.sender,
             eventId: _eventId
         }));
         return _eventId;
@@ -310,6 +337,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
         _event.status = ES_CLOSED;
         _event.version++;
     }
+
+
 
     // publish event ticket operation
     function getPublishEventTicketsMaxId(address _address, uint _eventId)
