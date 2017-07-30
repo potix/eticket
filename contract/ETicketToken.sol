@@ -357,10 +357,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     function getPublishEventTicket(address _address, uint _eventId, uint _ticketId) 
     ticketExists(_address, _eventId, _ticketId)
-    returns (uint32, string, uint32, uint32, uint8, bool, uint64) {
+    returns (uint, uint32, string, uint32, uint32, uint8, bool, uint64) {
         var _ticket = publishEventTickets[_address][_eventId][_ticketId];
         require(_address == msg.sender || _address == _ticket.owner);
-        return (_ticket.price, _ticket.joinOraclizeResponse, _ticket.buyCode, _ticket.joinCode, _ticket.status, _ticket.sale, _ticket.version);
+        return (_ticket.groupId, _ticket.price, _ticket.joinOraclizeResponse, _ticket.buyCode, _ticket.joinCode, _ticket.status, _ticket.sale, _ticket.version);
     }
 
     function getExtraPublishEventTicket(uint _eventId, uint _ticketId) 
@@ -386,7 +386,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
                 buyOraclizeResponse: "",
                 joinOraclizeResponse: "",
                 buyCode : getRandomCode(),
-                joinCode : getRandomCode(),
+                joinCode : 0,
                 status: TS_BUY,
                 sale: true,
                 version: 0
