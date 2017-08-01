@@ -7,6 +7,7 @@ library ValueFinder {
     uint8 constant VT_INT    = 3;
     uint8 constant VT_NULL   = 4;
     
+    uint8 constant ST_ARRAY_START     = 0x01;
     uint8 constant ST_OBJECT_START    = 0x02;
     uint8 constant ST_KEY_START       = 0x04;
     uint8 constant ST_VALUE_START     = 0x08;
@@ -23,7 +24,7 @@ library ValueFinder {
         uint valueLen;  
     }
     
-    function isKeymatch(finder _finder, string _findKey) private returns (bool) {
+    function isKeyMatch(finder _finder, string _findKey) private returns (bool) {
         bytes memory bFindKey = bytes(_findKey);
         if (bFindKey.length != _finder.keyLen) {
             return false;
@@ -36,13 +37,14 @@ library ValueFinder {
         return true;
     }
     
-    function findValuePos(finder _finder, string _findKey) private {
+    function findValuePos(finder _finder, string _findKey, int _findArrayIndex) private {
         uint8 _state = 0;
         uint _pos = 0;
         uint _i;
         uint _j;
         byte _c;
         byte _nc;
+        int _arrayIndex;
         while (true) {
             if (_pos == _finder.bSrc.length) {
                 break;
@@ -147,6 +149,7 @@ library ValueFinder {
                    _pos++;
                    _state &=  ~ST_NAME_SEP_START;
                    _state |= ST_VALUE_START;
+                   _arrayIndex = 0;
                    continue;
                 } else {
                     // unsupported format
@@ -156,7 +159,16 @@ library ValueFinder {
                 }
             } else if ((_state & ST_VALUE_START) != 0) {
                 // parse value
-                if (_c== '"') {
+                if ((_state & ST_ARRAY_START) == 0 &&  _c == "[") {
+                    _pos++;
+                    _state |= ST_ARRAY_START;
+                    continue;
+                } else if ((_state & ST_ARRAY_START) != 0 &&  _c == "]") {
+                    _pos++;
+                    _state &= ~ST_ARRAY_START;
+                    _arrayIndex = 0;
+                    continue;
+                } else if (_c== '"') {
                     _pos++;
                     _finder.valueStartPos = _pos;
                     for (_i = 0; _pos + _i < _finder.bSrc.length; _i++) {
@@ -222,7 +234,8 @@ library ValueFinder {
                         return;
                     }
                     _finder.valueLen = _pos + _i - _finder.valueStartPos; 
-                    if (isKeymatch(_finder, _findKey)) {
+                     if (isKeyMatch(_finder, _findKey) &&
+                        (_findArrayIndex == -1 || (_findArrayIndex >= 0 && _findArrayIndex == _arrayIndex))) {
                         _finder.found = true;
                         _finder.vType = VT_STRING;
                         return;
@@ -230,6 +243,9 @@ library ValueFinder {
                     _pos += _i + 1;
                     _state &=  ~ST_VALUE_START;
                     _state |= ST_VALUE_SEP_START;
+                    if ((_state & ST_ARRAY_START) != 0) {
+                        _arrayIndex++;
+                    }
                     continue;
                 } else if (_c == 't') {
                     // true
@@ -239,7 +255,8 @@ library ValueFinder {
                     if (_finder.bSrc[_pos + 1] == 'r' &&
                         _finder.bSrc[_pos + 2] == 'u' && 
                         _finder.bSrc[_pos + 3] == 'e') {
-                        if (isKeymatch(_finder, _findKey)) {
+                        if (isKeyMatch(_finder, _findKey) &&
+                            (_findArrayIndex == -1 || (_findArrayIndex >= 0 && _findArrayIndex == _arrayIndex))) {
                             _finder.found = true;
                             _finder.vType = VT_BOOL;
                             _finder.valueStartPos = _pos;
@@ -249,6 +266,9 @@ library ValueFinder {
                         _pos += 4;
                         _state &=  ~ST_VALUE_START;
                         _state |= ST_VALUE_SEP_START;
+                        if ((_state & ST_ARRAY_START) != 0) {
+                            _arrayIndex++;
+                        }
                         continue;
                     } else {
                         // unsupported format
@@ -265,8 +285,9 @@ library ValueFinder {
                         _finder.bSrc[_pos + 2] == 'l' &&
                         _finder.bSrc[_pos + 3] == 's' &&
                         _finder.bSrc[_pos + 4] == 'e') {
-                        if (isKeymatch(_finder, _findKey)) {
-                            _finder.found = true;
+                         if (isKeyMatch(_finder, _findKey) &&
+                            (_findArrayIndex == -1 || (_findArrayIndex >= 0 && _findArrayIndex == _arrayIndex))) {
+                           _finder.found = true;
                             _finder.vType = VT_BOOL;
                             _finder.valueStartPos = _pos;
                             _finder.valueLen = 5;
@@ -275,6 +296,9 @@ library ValueFinder {
                         _pos += 5;
                         _state &= ~ST_VALUE_START;
                         _state |= ST_VALUE_SEP_START;
+                        if ((_state & ST_ARRAY_START) != 0) {
+                            _arrayIndex++;
+                        }
                         continue;
                     } else {
                         // unsupported format
@@ -290,7 +314,8 @@ library ValueFinder {
                     if (_finder.bSrc[_pos + 1] == 'u' &&
                         _finder.bSrc[_pos + 2] == 'l' &&
                         _finder.bSrc[_pos + 3] == 'l') {
-                        if (isKeymatch(_finder, _findKey)) {
+                        if (isKeyMatch(_finder, _findKey) &&
+                            (_findArrayIndex == -1 || (_findArrayIndex >= 0 && _findArrayIndex == _arrayIndex))) {
                             _finder.found = true;
                             _finder.vType = VT_NULL;
                             _finder.valueStartPos = _pos;
@@ -300,6 +325,9 @@ library ValueFinder {
                         _pos += 4;
                         _state &=  ~ST_VALUE_START;
                         _state |= ST_VALUE_SEP_START;
+                        if ((_state & ST_ARRAY_START) != 0) {
+                            _arrayIndex++;
+                        }
                         continue;
                     } else {
                         // unsupported format
@@ -330,7 +358,8 @@ library ValueFinder {
                             return;
                     }
                     _finder.valueLen = _pos + _i - _finder.valueStartPos;
-                    if (isKeymatch(_finder, _findKey)) {
+                    if (isKeyMatch(_finder, _findKey) &&
+                        (_findArrayIndex == -1 || (_findArrayIndex >= 0 && _findArrayIndex == _arrayIndex))) {
                         _finder.found = true;
                         _finder.vType = VT_INT;
                         return;
@@ -338,6 +367,9 @@ library ValueFinder {
                     _pos += _i;
                     _state &=  ~ST_VALUE_START;
                     _state |= ST_VALUE_SEP_START;
+                    if ((_state & ST_ARRAY_START) != 0) {
+                        _arrayIndex++;
+                    }
                     continue;
                 } else {
                     // unsupported format
@@ -347,10 +379,14 @@ library ValueFinder {
                 }
             } else if ((_state & ST_VALUE_SEP_START) != 0) {
                 if (_c == 0x2c) {
-                   _pos++;
-                   _state &=  ~ST_VALUE_SEP_START;
-                   _state |= ST_KEY_START;
-                   continue;
+                    _pos++;
+                    _state &=  ~ST_VALUE_SEP_START;
+                     if ((_state & ST_ARRAY_START) != 0) {
+                         _state |= ST_VALUE_START; 
+                     } else {
+                         _state |= ST_KEY_START;
+                     }
+                     continue;
                 } else {
                     // unsupported format
                     _finder.found = false;
@@ -469,7 +505,7 @@ library ValueFinder {
     } 
     
     function findString(finder _finder, string _findKey) internal returns (bool, bool, bytes) {
-        findValuePos(_finder, _findKey);
+        findValuePos(_finder, _findKey, -1);
         if (!_finder.found) {
             return (false, false, new bytes(0));
         }
@@ -483,7 +519,7 @@ library ValueFinder {
     }
 
     function findInt(finder _finder, string _findKey) internal returns (bool, bool, int) {
-            findValuePos(_finder, _findKey);
+            findValuePos(_finder, _findKey, -1);
             if (!_finder.found) {
                 return (false, false, 0);
             }   
@@ -497,7 +533,49 @@ library ValueFinder {
     }
 
     function findBool(finder _finder, string _findKey) internal returns (bool, bool, bool) {
-            findValuePos(_finder, _findKey);
+            findValuePos(_finder, _findKey, -1);
+            if (!_finder.found) {
+                return (false, false, false);
+            }    
+            if (_finder.found && _finder.vType == VT_BOOL) {
+                return (true, false, convertBool(_finder));
+            } else if (_finder.found && _finder.vType == VT_NULL) {
+                return (true, true, false);
+            } else {
+                return (false, false, false);
+            }
+    }
+    
+    function findArrayString(finder _finder, string _findKey, int _arrayIndex) internal returns (bool, bool, bytes) {
+        findValuePos(_finder, _findKey, _arrayIndex);
+        if (!_finder.found) {
+            return (false, false, new bytes(0));
+        }
+        if (_finder.found && _finder.vType == VT_STRING) {
+            return (true, false, convertString(_finder));
+        } else if (_finder.found && _finder.vType == VT_NULL) {
+            return (true, true, new bytes(0));
+        } else {
+            return (false, false, new bytes(0));
+        }
+    }
+
+    function findArrayInt(finder _finder, string _findKey, int _arrayIndex) internal returns (bool, bool, int) {
+            findValuePos(_finder, _findKey, _arrayIndex);
+            if (!_finder.found) {
+                return (false, false, 0);
+            }   
+            if (_finder.found && _finder.vType == VT_INT) {
+                return (true, false, convertInt(_finder));
+            } else if (_finder.found && _finder.vType == VT_NULL) {
+                return (true, true, 0);
+            } else {
+                return (false, false, 0);
+            }
+    }
+
+    function findArrayBool(finder _finder, string _findKey, int _arrayIndex) internal returns (bool, bool, bool) {
+            findValuePos(_finder, _findKey, _arrayIndex);
             if (!_finder.found) {
                 return (false, false, false);
             }    

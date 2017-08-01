@@ -5,7 +5,7 @@ import "./ValueFinder.sol";
 contract ValueFinderTest {
      using ValueFinder for ValueFinder.finder;
 
-    string constant jsonSubset = '{  "aaa" : "bbb" ,"a.b":"ttt", \n \t \r  "null": null, "pppl" : "\u3057\u306d" ,"b.h"  :  -4  ,  "ggg":6778, "rr":false,   "uu"  :  true}';
+    string constant jsonSubset = '{  "aaa" : "bbb" ,"a.b":"ttt", \n \t \r  "null": null, "pppl" : "\u3057\u306d" , "arr" : ["abc" ,-55, true  ,  null   ],  "b.h"  :  -4  ,  "ggg":6778, "rr":false,   "uu"  :  true}';
     
     function getString1() returns (bool _found, bool _isNULL, bytes _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
@@ -85,5 +85,50 @@ contract ValueFinderTest {
     function getBool5() returns (bool _found, bool _isNULL, bool _value) {
         var finder = ValueFinder.initFinder(jsonSubset);
         (_found, _isNULL, _value) = finder.findBool("XXX");
+    }  
+
+    function getArrayString1() returns (bool _found, bool _isNULL, bytes _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayString("arr", 0);
+    }  
+
+    function getArrayString2() returns (bool _found, bool _isNULL, bytes _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayString("arr", 1);
+    }  
+
+    function getArrayString3() returns (bool _found, bool _isNULL, bytes _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayString("arr", 3);
+    }  
+    
+    function getArrayInt1() returns (bool _found, bool _isNULL, int _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayInt("arr", 1);
+    }  
+
+    function getArrayInt2() returns (bool _found, bool _isNULL, int _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayInt("arr", 2);
+    }  
+
+    function getArrayInt3() returns (bool _found, bool _isNULL, int _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayInt("arr", 3);
+    }  
+
+    function getArrayBool1() returns (bool _found, bool _isNULL, bool _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayBool("arr", 2);
+    }  
+
+    function getArrayBool2() returns (bool _found, bool _isNULL, bool _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayBool("arr", 0);
+    }  
+
+    function getArrayBool3() returns (bool _found, bool _isNULL, bool _value) {
+        var finder = ValueFinder.initFinder(jsonSubset);
+        (_found, _isNULL, _value) = finder.findArrayBool("arr", 3);
     }  
 }

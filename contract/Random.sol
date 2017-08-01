@@ -5,12 +5,11 @@ contract Random {
     
     function getRandom() returns (uint) {
         randNonce++;
-        return (uint(sha3(uint(block.timestamp) 
-            + uint(block.number) 
-            + uint(block.difficulty)
-            + uint(msg.gas)
-            + uint(msg.sender)))
-            * uint(sha3(randNonce)));
+        return uint(sha3(block.timestamp, 
+                         block.number, 
+                         block.difficulty,
+                         msg.gas,
+                         msg.sender)) *
+               uint(sha3(randNonce));
     }
 }
-
