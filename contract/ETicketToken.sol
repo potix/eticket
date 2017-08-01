@@ -449,16 +449,36 @@ contract ETicketToken is StandardToken, Ownable, Random {
     
     
     // ticket operation
+    function checkSaleTickets(address _address, uint _eventId)
+    eventExists(_address, _eventId) 
+    returns (uint _saleTicketCount, uint32 _minPrice, uint32 _maxPrice)
+    {
+        _saleTicketCount = 0;
+        _minPrice = 0xffffffff;
+        _maxPrice = 0;
+        for (uint i; i < publishEventTickets[msg.sender][_eventId].length; i++) {
+            var _ticket = publishEventTickets[msg.sender][_eventId][i];
+            if (_ticket.status == TS_BUY && _ticket.sale) {
+               _saleTicketCount++; 
+            }
+            if (_ticket.price < _minPrice) {
+                _minPrice = _ticket.price;
+            } else if (_ticket.price > _maxPrice) {
+                _maxPrice = _ticket.price;
+            }
+        }    
+    }
+    
     uint8 constant BUY_OPT_USE_CODE  = 0x01;
     uint8 constant BUY_OPT_USE_GROUP = 0x02;
     uint8 constant BUY_OPT_USE_PRICE = 0x04;
-    uint8 constant BUY_OPT_NO_CONTINUOUS   = 0x08;
+    uint8 constant BUY_OPT_CONTINUOUS = 0x08;
     
     uint8 constant BUY_RESPNSE_OK               = 1;
     uint8 constant BUY_RESPNSE_NOT_ENOUGH_TOKEN = 2;
     uint8 constant BUY_RESPNSE_NO_TICKET        = 3;
     
-    function buyTicketLogic(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
+    function buyTicketsLogic(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
     returns (uint8) {
         publishEventTicket[] memory _tickets = publishEventTickets[msg.sender][_eventId];
         publishEventTicket memory  _ticket;
@@ -483,7 +503,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
             if ((_buyOptions & BUY_OPT_USE_PRICE) != 0 && !(_minPrice <= _ticket.price && _ticket.price <~ _maxPrice)) {
                 continue;
             }
-            if (_candidateTicketsIndex > 0 && (_buyOptions & BUY_OPT_NO_CONTINUOUS) == 0 && _candidateTickets[_candidateTicketsIndex - 1] + 1 != _i) {
+            if (_candidateTicketsIndex > 0 && (_buyOptions & BUY_OPT_CONTINUOUS) != 0 && _candidateTickets[_candidateTicketsIndex - 1] + 1 != _i) {
                 _candidateTicketsIndex = 0;
                 _totalNeedPrice = 0;
                 continue;
@@ -515,10 +535,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return BUY_RESPNSE_OK;
     }
     
-    function buyTicket(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
+    function buyTickets(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
     eventExists(_publisher, _eventId) 
     returns (uint8) {
-        return buyTicketLogic(_publisher, _eventId, _amount, _buyOptions, _groupId, _code, _minPrice, _maxPrice);
+        return buyTicketsLogic(_publisher, _eventId, _amount, _buyOptions, _groupId, _code, _minPrice, _maxPrice);
     }
 
     function changePriceTicket(address _publisher, uint _eventId, uint _ticketId, uint32 _price) 
