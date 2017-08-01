@@ -1,6 +1,11 @@
 pragma solidity ^0.4.11;
 
 library ValueFinder {
+    // 一度paeseしたところは覚えておいて、パースを端折る昨日入れる
+    // この際stackを作って、パースした情報はそこに入れていく
+    // メモリが動的に容量拡張できないので、自前であたらしい領域を倍のサイズで確保してコピー(realloc)
+    // initで初期容量を指定できるようにする。0なら勝手に決める
+    
     uint8 constant VT_NONE   = 0;
     uint8 constant VT_STRING = 1;
     uint8 constant VT_BOOL   = 2;

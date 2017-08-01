@@ -6,6 +6,19 @@ import "./ValueFinder.sol";
 import "./Random.sol";
 
 contract ETicketToken is StandardToken, Ownable, Random {
+    // ticket関連ストレージコントラクトとそれを操作するライブラリロジックの分離
+    // メインコントラクトは、ライブラリ関数を呼ぶだけにする
+    // その際、ストレージコントラクトを渡す。
+    
+    // 差分だけの更新ができるようにしたい
+    // version情報だけをチェックできるようにしたい
+    // いまのところ、リストデータを返すすべがない。
+    // jsonでも作れれば話は違うけど。
+
+    // cancelやイベント中止で主催者のトークンが足りない場合エラーになるけど
+    // 一旦プールに入れておいて、回収を呼び出すまではとりだせないようにしたほうがいいかも
+    // 回収を呼び出せる条件にイベントがcloseしていることを盛り込む
+
     using ValueFinder for ValueFinder.finder;
          
     string public name;
@@ -18,9 +31,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
     uint8 constant TS_JOIN   = 0x02;
     uint8 constant TS_ENTER  = 0x04;
 
-    uint8 constant ES_OPENED  = 1;
-    uint8 constant ES_STOPPED = 2;
-    uint8 constant ES_CLOSED  = 3;
+    uint8 constant ES_OPENED    = 1;
+    uint8 constant ES_STOPPED   = 2;
+    uint8 constant ES_CLOSED    = 3;
+    uint8 constant ES_COLLECTED = 4; // TODO 回収
 
     // publish ticket
     struct publishEventTicket {
