@@ -1,9 +1,9 @@
 pragma solidity ^0.4.11;
 
-contract Random {
+Library  Random {
     uint randNonce;
     
-    function getRandom() returns (uint) {
+    function getRandom() internal returns (uint) {
         randNonce++;
         return uint(sha3(block.timestamp, 
                          block.number, 
@@ -13,3 +13,4 @@ contract Random {
                uint(sha3(randNonce));
     }
 }
+

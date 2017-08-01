@@ -4,8 +4,9 @@ import "./StandardToken.sol";
 import "./Ownable.sol";
 import "./ValueFinder.sol";
 import "./Random.sol";
+import "./Convert.sol";
 
-contract ETicketToken is StandardToken, Ownable, Random {
+contract ETicketToken is StandardToken, Ownable {
     // ticket関連ストレージコントラクトとそれを操作するライブラリロジックの分離
     // メインコントラクトは、ライブラリ関数を呼ぶだけにする
     // その際、ストレージコントラクトを渡す。
@@ -139,7 +140,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     }
     
     function getRandomCode() private returns (uint32){ 
-        return uint32(getRandom() % 4294967291);
+        return uint32(Random.getRandom() % 4294967291);
     }
 
     function ETicketToken() {
@@ -218,7 +219,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         (_found, _isNull, _value) = finder.findString("profile");
         require(_found && !_isNull && _value.length != 0);
         users[msg.sender] = user({
-            userNumber: uint(sha3(msg.sender)),
+            userNumber: Convert.bytes32ToHexString(sha3(msg.sender)),
             name: _name,
             attributes: _attributes,
             version:  0
