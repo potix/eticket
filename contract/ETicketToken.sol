@@ -427,7 +427,16 @@ contract ETicketToken is StandardToken, Ownable, Random {
         _maxPrice = 0;
         for (uint i; i < publishEventTickets[msg.sender][_eventId].length; i++) {
             var _ticket = publishEventTickets[msg.sender][_eventId][i];
-            _ticketCount++;
+            if (_ticketCount == 0){
+                _minPrice = _ticket.price;
+                _maxPrice = _ticket.price;
+            } else {
+                if (_ticket.price < _minPrice) {
+                    _minPrice = _ticket.price;
+                } else if (_ticket.price > _maxPrice) {
+                    _maxPrice = _ticket.price;
+                }
+            }
             if (_ticket.status == TS_BUY) {
                 _buyCount++;                
             }  else if (_ticket.status == TS_JOIN) {
@@ -435,36 +444,37 @@ contract ETicketToken is StandardToken, Ownable, Random {
             }  else if (_ticket.status == TS_ENTER) {
                 _enterCount++;                
             }
-            if (_ticket.price < _minPrice) {
-                _minPrice = _ticket.price;
-            } else if (_ticket.price > _maxPrice) {
-                _maxPrice = _ticket.price;
-            }
             if (_ticket.firstSoldPrice != -1) {
                 _totalSoldPrice += uint(_ticket.firstSoldPrice);
             }
+            _ticketCount++;
         }
     }
     
     
     
     // ticket operation
-    function checkSaleTickets(address _address, uint _eventId)
-    eventExists(_address, _eventId) 
+    function checkSaleTickets(address _publisher, uint _eventId)
+    eventExists(_publisher, _eventId) 
     returns (uint, uint32, uint32)
     {
         uint _saleTicketCount = 0;
-        uint32 _minPrice = 0xffffffff;
+        uint32 _minPrice = 0;
         uint32 _maxPrice = 0;
-        for (uint i; i < publishEventTickets[msg.sender][_eventId].length; i++) {
-            var _ticket = publishEventTickets[msg.sender][_eventId][i];
+        for (uint i; i < publishEventTickets[_publisher][_eventId].length; i++) {
+            var _ticket = publishEventTickets[_publisher][_eventId][i];
+            if (_saleTicketCount == 0) {
+                _minPrice = _ticket.price;
+                _maxPrice = _ticket.price;
+            } else {
+                if (_ticket.price < _minPrice) {
+                    _minPrice = _ticket.price;
+                } else if (_ticket.price > _maxPrice) {
+                    _maxPrice = _ticket.price;
+                }
+            }
             if (_ticket.status == TS_BUY && _ticket.sale) {
                _saleTicketCount++; 
-            }
-            if (_ticket.price < _minPrice) {
-                _minPrice = _ticket.price;
-            } else if (_ticket.price > _maxPrice) {
-                _maxPrice = _ticket.price;
             }
         }    
         return (_saleTicketCount, _minPrice, _maxPrice);
@@ -479,9 +489,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
     uint8 constant BUY_RESPNSE_NOT_ENOUGH_TOKEN = 2;
     uint8 constant BUY_RESPNSE_NO_TICKET        = 3;
     
-    function buyTicketsLogic(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
+    function buyTicketsLogic(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice) private
     returns (uint8) {
-        publishEventTicket[] memory _tickets = publishEventTickets[msg.sender][_eventId];
+        publishEventTicket[] memory _tickets = publishEventTickets[_publisher][_eventId];
         publishEventTicket memory  _ticket;
         uint _i;
         uint[] memory _candidateTickets = new uint[](_amount);
@@ -544,8 +554,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     function changePriceTicket(address _publisher, uint _eventId, uint _ticketId, uint32 _price) 
     ticketExists(_publisher, _eventId, _ticketId) {
-        var _event = publishEvents[msg.sender][_eventId];
-        var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
+        var _event = publishEvents[_publisher][_eventId];
+        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
         require(_ticket.status == TS_BUY);
@@ -555,8 +565,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     function sellTicket(address _publisher, uint _eventId, uint _ticketId) 
     ticketExists(_publisher, _eventId, _ticketId) {
-        var _event = publishEvents[msg.sender][_eventId];
-        var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
+        var _event = publishEvents[_publisher][_eventId];
+        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
         require(_ticket.status == TS_BUY);
@@ -566,8 +576,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     function cancelTicket(address _publisher, uint _eventId, uint _ticketId) 
     ticketExists(_publisher, _eventId, _ticketId) {
-        var _event = publishEvents[msg.sender][_eventId];
-        var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
+        var _event = publishEvents[_publisher][_eventId];
+        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
         require(_ticket.status == TS_BUY);
@@ -581,8 +591,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     function transferTicket(address _publisher, uint _eventId, uint _ticketId, address _to)
     ticketExists(_publisher, _eventId, _ticketId) {
-        var _event = publishEvents[msg.sender][_eventId];
-        var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
+        var _event = publishEvents[_publisher][_eventId];
+        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
         require(_ticket.status == TS_BUY);
