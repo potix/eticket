@@ -417,7 +417,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         }
     }
 
-    function getSummaryPublishEventTickets(address _address, uint _eventId)
+    function getSummaryPublishEventTickets(uint _eventId)
     eventExists(msg.sender, _eventId) 
     returns (uint _ticketCount, uint _buyCount, uint _joinCount, uint _enterCount, uint _totalSoldPrice, uint32 _minPrice, uint32 _maxPrice) {
         _ticketCount = 0;
@@ -460,8 +460,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     uint8 constant BUY_RESPNSE_NOT_ENOUGH_TOKEN = 2;
     uint8 constant BUY_RESPNSE_NO_TICKET        = 3;
     
-    function buyTicket(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
-    eventExists(_publisher, _eventId) 
+    function buyTicketLogic(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
     returns (uint8) {
         publishEventTicket[] memory _tickets = publishEventTickets[msg.sender][_eventId];
         publishEventTicket memory  _ticket;
@@ -516,6 +515,12 @@ contract ETicketToken is StandardToken, Ownable, Random {
             _ticket.version++;
         }
         return BUY_RESPNSE_OK;
+    }
+    
+    function buyTicket(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
+    eventExists(_publisher, _eventId) 
+    returns (uint8) {
+        return buyTicketLogic(_publisher, _eventId, _amount, _buyOptions, _groupId, _code, _minPrice, _maxPrice);
     }
 
     function changePriceTicket(address _publisher, uint _eventId, uint _ticketId, uint32 _price) 
@@ -579,6 +584,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     }
     
 }
+
 
 
 
