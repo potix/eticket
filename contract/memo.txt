@@ -1,0 +1,28 @@
+contract owner
+- transfer
+"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c", 10000
+"0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db", 10000
+
+
+
+* host1 ("0x14723a09acff6d2a60dcdf7aa4aff308fddc160c")
+- createUSer
+"host1", "{\"email\":\"email\",\"profile\":\"profile\"}"
+- getUSer
+"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c"
+- createPublishEvent
+"event1", "{\"description\":\"description\", \"country\":\"jp\", \"tags\":[\"tag1\"], \"startDateTime\":\"startDateTime\",\"endDateTime\":\"endDateTime\", \"place\":\"place\", \"mapLink\": \"maplink\"}", 500
+- createPublishEventTicketGroup
+0, 10, 200
+
+* user1 ("0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db")
+-createUser
+"user1", "{\"email\":\"email\",\"profile\":\"profile\"}"
+- getevEnrefMax
+- getEvnetRef
+0
+- getPublishEvent
+"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c", 0 
+- buyTicket
+"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c", 0, 2, 0, 0, "", 0, 0
+
