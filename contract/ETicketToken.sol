@@ -19,6 +19,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
     // cancelやイベント中止で主催者のトークンが足りない場合エラーになるけど
     // 一旦プールに入れておいて、回収を呼び出すまではとりだせないようにしたほうがいいかも
     // 回収を呼び出せる条件にイベントがcloseしていることを盛り込む
+    
+    // requireでエラー起こすより、リターンコード定義して返したほうがいい
+    // requireは状態変更したが、入力的におかしい場合に留める
 
     using ValueFinder for ValueFinder.finder;
          
