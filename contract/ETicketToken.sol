@@ -451,18 +451,39 @@ contract ETicketToken is StandardToken, Ownable, Random {
         }
     }
     
-    
-    
     // ticket operation
-    function checkSaleTickets(address _publisher, uint _eventId)
+    uint8 constant CHECK_OPT_USE_OWNER     = 0x01;
+    uint8 constant CHECK_OPT_USE_GROUP     = 0x02;
+    uint8 constant CHECK_OPT_USE_MAX_PRICE = 0x04;
+
+    function checkSaleTickets(address _publisher, uint _eventId, uint8 _buyOptions, address _owner, uint8 _groupId,  uint32 _maxPrice)
     eventExists(_publisher, _eventId) 
     returns (uint, uint32, uint32)
     {
+        publishEventTicket memory  _ticket;
         uint _saleTicketCount = 0;
         uint32 _minPrice = 0;
         uint32 _maxPrice = 0;
         for (uint i; i < publishEventTickets[_publisher][_eventId].length; i++) {
-            var _ticket = publishEventTickets[_publisher][_eventId][i];
+            _ticket = publishEventTickets[_publisher][_eventId][i];
+            if (_ticket.owner != msg.sender) {
+                continue;
+            }
+            if (!_ticket.sale) {
+                continue;
+            }
+            if (_ticket.status != TS_BUY) {
+                continue;
+            }
+            if ((_buyOptions & CHECK_OPT_USE_OWNER) != 0 && _ticket.owner != _owner) {
+                continue;
+            }
+            if ((_buyOptions & CHECK_OPT_USE_GROUP) != 0 && _ticket.groupId != _groupId) {
+                continue;
+            }
+            if ((_buyOptions & CHECK_OPT_USE_MAX_PRICE) != 0 && _ticket.price > _maxPrice) {
+                continue;
+            }
             if (_saleTicketCount == 0) {
                 _minPrice = _ticket.price;
                 _maxPrice = _ticket.price;
@@ -473,23 +494,21 @@ contract ETicketToken is StandardToken, Ownable, Random {
                     _maxPrice = _ticket.price;
                 }
             }
-            if (_ticket.status == TS_BUY && _ticket.sale) {
-               _saleTicketCount++; 
-            }
+            _saleTicketCount++; 
         }    
         return (_saleTicketCount, _minPrice, _maxPrice);
     }
     
-    uint8 constant BUY_OPT_USE_CODE  = 0x01;
-    uint8 constant BUY_OPT_USE_GROUP = 0x02;
-    uint8 constant BUY_OPT_USE_PRICE = 0x04;
-    uint8 constant BUY_OPT_CONTINUOUS = 0x08;
+    uint8 constant BUY_OPT_USE_OWNER     = 0x01;
+    uint8 constant BUY_OPT_USE_GROUP     = 0x02;
+    uint8 constant BUY_OPT_USE_MAX_PRICE = 0x04;
+    uint8 constant BUY_OPT_CONTINUOUS    = 0x08;
     
     uint8 constant BUY_RESPNSE_OK               = 1;
     uint8 constant BUY_RESPNSE_NOT_ENOUGH_TOKEN = 2;
     uint8 constant BUY_RESPNSE_NO_TICKET        = 3;
     
-    function buyTicketsLogic(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice) private
+    function buyTicketsLogic(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, address _owner, uint8 _groupId, uint32 _maxPrice) private
     returns (uint8) {
         publishEventTicket[] memory _tickets = publishEventTickets[_publisher][_eventId];
         publishEventTicket memory  _ticket;
@@ -508,10 +527,13 @@ contract ETicketToken is StandardToken, Ownable, Random {
             if (_ticket.status != TS_BUY) {
                 continue;
             }
+            if ((_buyOptions & BUY_OPT_USE_OWNER) != 0 && _ticket.owner != _owner) {
+                continue;
+            }
             if ((_buyOptions & BUY_OPT_USE_GROUP) != 0 && _ticket.groupId != _groupId) {
                 continue;
             }
-            if ((_buyOptions & BUY_OPT_USE_PRICE) != 0 && !(_minPrice <= _ticket.price && _ticket.price <~ _maxPrice)) {
+            if ((_buyOptions & BUY_OPT_USE_MAX_PRICE) != 0 && _ticket.price > _maxPrice) {
                 continue;
             }
             if (_candidateTicketsIndex > 0 && (_buyOptions & BUY_OPT_CONTINUOUS) != 0 && _candidateTickets[_candidateTicketsIndex - 1] + 1 != _i) {
@@ -546,10 +568,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return BUY_RESPNSE_OK;
     }
     
-    function buyTickets(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _minPrice, uint32 _maxPrice)
+    function buyTickets(address _publisher, uint _eventId, uint _amount, uint8 _buyOptions, uint8 _groupId, string _code, uint32 _maxPrice)
     eventExists(_publisher, _eventId) 
     returns (uint8) {
-        return buyTicketsLogic(_publisher, _eventId, _amount, _buyOptions, _groupId, _code, _minPrice, _maxPrice);
+        return buyTicketsLogic(_publisher, _eventId, _amount, _buyOptions, _groupId, _code, _maxPrice);
     }
 
     function changePriceTicket(address _publisher, uint _eventId, uint _ticketId, uint32 _price) 
@@ -604,14 +626,19 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
 
     // join enter operation
-    function join() {
+    function join(address _publisher, uint _eventId, uint _ticketId) {
         
     }
     
-    function enter() {
+    function activateCode(address _publisher, uint _eventId, uint _ticketId, string _code) {
+        
+    }
+    
+    function enter(address _publisher, uint _eventId, uint _ticketId) {
         
     }
     
 }
+
 
 
