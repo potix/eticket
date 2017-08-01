@@ -164,9 +164,11 @@ library ValueFinder {
                     _state |= ST_ARRAY_START;
                     continue;
                 } else if ((_state & ST_ARRAY_START) != 0 &&  _c == "]") {
+                    // empty array
                     _pos++;
                     _state &= ~ST_ARRAY_START;
-                    _arrayIndex = 0;
+                    _state &=  ~ST_VALUE_START;
+                    _state |= ST_VALUE_SEP_START;
                     continue;
                 } else if (_c== '"') {
                     _pos++;
@@ -378,7 +380,11 @@ library ValueFinder {
                     return;
                 }
             } else if ((_state & ST_VALUE_SEP_START) != 0) {
-                if (_c == 0x2c) {
+                if ((_state & ST_ARRAY_START) != 0 &&  _c == "]") {
+                    _pos++;
+                    _state &= ~ST_ARRAY_START;
+                    continue;
+                } else if (_c == 0x2c) {
                     _pos++;
                     _state &=  ~ST_VALUE_SEP_START;
                      if ((_state & ST_ARRAY_START) != 0) {
