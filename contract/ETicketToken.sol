@@ -6,7 +6,7 @@ import "./ValueFinder.sol";
 import "./Random.sol";
 import "./Convert.sol";
 
-contract ETicketToken is StandardToken, Ownable {
+contract ETicketToken is StandardToken, Ownable, Random {
     // ticket関連ストレージコントラクトとそれを操作するライブラリロジックの分離
     // メインコントラクトは、ライブラリ関数を呼ぶだけにする
     // その際、ストレージコントラクトを渡す。
@@ -67,7 +67,7 @@ contract ETicketToken is StandardToken, Ownable {
 
     // user
     struct user {
-        uint userNumber;
+        string userNumber;
         string name;
         string attributes;
         uint64 version;
@@ -140,7 +140,7 @@ contract ETicketToken is StandardToken, Ownable {
     }
     
     function getRandomCode() private returns (uint32){ 
-        return uint32(Random.getRandom() % 4294967291);
+        return uint32(getRandom() % 4294967291);
     }
 
     function ETicketToken() {
@@ -206,7 +206,7 @@ contract ETicketToken is StandardToken, Ownable {
     // user operation
     function getUser(address _address) 
     userExists(_address) 
-    returns (uint, string, string, uint64) {
+    returns (string, string, string, uint64) {
         return (users[_address].userNumber, users[_address].name, users[_address].attributes, users[_address].version);
     }
 

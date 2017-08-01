@@ -1,6 +1,6 @@
 pragma solidity ^0.4.11;
 
-Library  Random {
+contract  Random {
     uint randNonce;
     
     function getRandom() internal returns (uint) {
