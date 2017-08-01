@@ -451,11 +451,11 @@ contract ETicketToken is StandardToken, Ownable, Random {
     // ticket operation
     function checkSaleTickets(address _address, uint _eventId)
     eventExists(_address, _eventId) 
-    returns (uint _saleTicketCount, uint32 _minPrice, uint32 _maxPrice)
+    returns (uint, uint32, uint32)
     {
-        _saleTicketCount = 0;
-        _minPrice = 0xffffffff;
-        _maxPrice = 0;
+        uint _saleTicketCount = 0;
+        uint32 _minPrice = 0xffffffff;
+        uint32 _maxPrice = 0;
         for (uint i; i < publishEventTickets[msg.sender][_eventId].length; i++) {
             var _ticket = publishEventTickets[msg.sender][_eventId][i];
             if (_ticket.status == TS_BUY && _ticket.sale) {
@@ -467,6 +467,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
                 _maxPrice = _ticket.price;
             }
         }    
+        return (_saleTicketCount, _minPrice, _maxPrice);
     }
     
     uint8 constant BUY_OPT_USE_CODE  = 0x01;
