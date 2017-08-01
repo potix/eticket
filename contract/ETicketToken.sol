@@ -53,6 +53,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
 
     // user
     struct user {
+        uint userNumber;
         string name;
         string attributes;
         uint64 version;
@@ -191,8 +192,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
     // user operation
     function getUser(address _address) 
     userExists(_address) 
-    returns (string, string, uint64) {
-        return (users[_address].name, users[_address].attributes, users[_address].version);
+    returns (uint, string, string, uint64) {
+        return (users[_address].userNumber, users[_address].name, users[_address].attributes, users[_address].version);
     }
 
     function createUser(string _name, string _attributes) 
@@ -204,6 +205,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         (_found, _isNull, _value) = finder.findString("profile");
         require(_found && !_isNull && _value.length != 0);
         users[msg.sender] = user({
+            userNumber: uint(sha3(msg.sender)),
             name: _name,
             attributes: _attributes,
             version:  0
@@ -253,15 +255,13 @@ contract ETicketToken is StandardToken, Ownable, Random {
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("country");
         require(_found && !_isNull && _value.length != 0);
-        (_found, _isNull, _value) = finder.findString("tags");
+        (_found, _isNull, _value) = finder.findArrayString("tags", 0);
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("startDateTime");
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("endDateTime");
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("place");
-        require(_found && !_isNull && _value.length != 0);
-        (_found, _isNull, _value) = finder.findString("mapUrl");
         require(_found && !_isNull && _value.length != 0);
         // create publish event
         var _eventId = publishEvents[msg.sender].length;
@@ -291,15 +291,13 @@ contract ETicketToken is StandardToken, Ownable, Random {
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("country");
         require(_found && !_isNull && _value.length != 0);
-        (_found, _isNull, _value) = finder.findString("tags");
+        (_found, _isNull, _value) = finder.findArrayString("tags", 0);
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("startDateTime");
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("endDateTime");
         require(_found && !_isNull && _value.length != 0);
         (_found, _isNull, _value) = finder.findString("place");
-        require(_found && !_isNull && _value.length != 0);
-        (_found, _isNull, _value) = finder.findString("mapUrl");
         require(_found && !_isNull && _value.length != 0);
         var _event = publishEvents[msg.sender][_eventId];
         _event.name = _name;
@@ -584,7 +582,5 @@ contract ETicketToken is StandardToken, Ownable, Random {
     }
     
 }
-
-
 
 
