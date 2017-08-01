@@ -13,10 +13,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
     uint public decimals;
     uint public totalSupply;
 
-    uint8 constant TS_BUY   = 1;
-    uint8 constant TS_JOIN  = 2;
-    uint8 constant TS_ENTER = 3;
-
+    uint8 constant TS_SALE   = 0x10;
+    uint8 constant TS_BUY    = 0x01;
+    uint8 constant TS_JOIN   = 0x02;
+    uint8 constant TS_ENTER  = 0x04;
 
     uint8 constant ES_OPENED  = 1;
     uint8 constant ES_STOPPED = 2;
@@ -28,12 +28,11 @@ contract ETicketToken is StandardToken, Ownable, Random {
         address owner;
         int64   firstSoldPrice;
         uint32  price;
-        string  buyOraclizeResponse;
+        string  activateOraclizeResponse;
         string  enterOraclizeResponse;
         uint32  joinCode;
         uint32  enterCode;
         uint8   status;
-        bool    sale;
         uint64  version;
     }
     mapping (address => mapping(uint => publishEventTicket[])) publishEventTickets;
@@ -42,7 +41,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     struct publishEvent {
         string name;
         string attributes;
-        string buyOraclizeUrl;
+        string activateOraclizeUrl;
         string enterOraclizeUrl;
         uint32 maxPrice;
         uint8  status;
@@ -268,7 +267,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         publishEvents[msg.sender].push(publishEvent ({
             name: _name,
             attributes: _attributes,
-            buyOraclizeUrl: "",
+            activateOraclizeUrl: "",
             enterOraclizeUrl: "",
             maxPrice :_maxPrice,
             status: ES_OPENED,
@@ -310,13 +309,13 @@ contract ETicketToken is StandardToken, Ownable, Random {
     eventExists(msg.sender, _eventId) 
     returns (string, string) {
         var _event = publishEvents[msg.sender][_eventId];
-        return (_event.buyOraclizeUrl, _event.enterOraclizeUrl);
+        return (_event.activateOraclizeUrl, _event.enterOraclizeUrl);
     }
     
-    function setOraclizeUrlPublishEvent(uint _eventId, string _buyOraclizeUrl, string _enterOraclizeUrl)
+    function setOraclizeUrlPublishEvent(uint _eventId, string _activateOraclizeUrl, string _enterOraclizeUrl)
     eventExists(msg.sender, _eventId) {
         var _event = publishEvents[msg.sender][_eventId];
-        _event.buyOraclizeUrl = _buyOraclizeUrl;
+        _event.activateOraclizeUrl = _activateOraclizeUrl;
         _event.enterOraclizeUrl = _enterOraclizeUrl;
     }
     
@@ -353,35 +352,25 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return publishEventTickets[_address][_eventId].length - 1;
     }
 
+    function getPublishEventTicketLogic(address _address, uint _eventId, uint _ticketId) private
+    returns (uint, uint32, string, uint32, uint32, uint8, uint64) {
+        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
+        require(_address == msg.sender);
+        require(_address == _ticket.owner);
+        return (_ticket.groupId, _ticket.price, _ticket.enterOraclizeResponse, _ticket.joinCode, _ticket.enterCode, _ticket.status _ticket.version);
+    }
+    
     function getPublishEventTicket(address _address, uint _eventId, uint _ticketId) 
     ticketExists(_address, _eventId, _ticketId)
-    returns (uint, uint32, uint8, bool, uint64) {
-        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
-        require(_address == msg.sender || _address == _ticket.owner);
-        return (_ticket.groupId, _ticket.price, _ticket.status, _ticket.sale, _ticket.version);
-    }
-
-    function getCodePublishEventTicket(address _address, uint _eventId, uint _ticketId) 
-    ticketExists(_address, _eventId, _ticketId)
-    returns (uint32, uint32, uint64) {
-        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
-        require(_address == msg.sender || _address == _ticket.owner);
-        return (_ticket.joinCode, _ticket.enterCode, _ticket.version);
-    }
-
-    function getOraclizeResponsePublishEventTicket(address _address, uint _eventId, uint _ticketId) 
-    ticketExists(_address, _eventId, _ticketId)
-    returns (string, uint64) {
-        var _ticket = publishEventTickets[_address][_eventId][_ticketId];
-        require(_address == msg.sender || _address == _ticket.owner);
-        return (_ticket.enterOraclizeResponse, _ticket.version);
+    returns (uint, uint32, string, uint32, uint32, uint8, uint64) {
+        return getPublishEventTicketLogic(_address, _eventId, _ticketId);
     }
 
     function getExtraPublishEventTicket(uint _eventId, uint _ticketId) 
     ticketExists(msg.sender, _eventId, _ticketId) 
     returns (int64, address, string, uint64) {
         var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
-        return (_ticket.firstSoldPrice, _ticket.owner,  _ticket.buyOraclizeResponse, _ticket.version);
+        return (_ticket.firstSoldPrice, _ticket.owner,  _ticket.activateOraclizeResponse, _ticket.version);
     }
 
     function createPublishEventTicketGroup(uint _eventId, uint _amount, uint32 _price) 
@@ -397,12 +386,11 @@ contract ETicketToken is StandardToken, Ownable, Random {
                 owner: msg.sender,
                 firstSoldPrice: -1,
                 price: _price,
-                buyOraclizeResponse: "",
+                activateOraclizeResponse: "",
                 enterOraclizeResponse: "",
                 joinCode : 0,
                 enterCode : 0,
-                status: TS_BUY,
-                sale: true,
+                status: TS_SALE|TS_BUY,
                 version: 0
             }));
             // create user ticket ref
@@ -437,11 +425,11 @@ contract ETicketToken is StandardToken, Ownable, Random {
                     _maxPrice = _ticket.price;
                 }
             }
-            if (_ticket.status == TS_BUY) {
+            if ((_ticket.status & TS_BUY) != 0) {
                 _buyCount++;                
-            }  else if (_ticket.status == TS_JOIN) {
+            }  else if ((_ticket.status & TS_JOIN) != 0) {
                 _joinCount++;                
-            }  else if (_ticket.status == TS_ENTER) {
+            }  else if ((_ticket.status & TS_ENTER) != 0) {
                 _enterCount++;                
             }
             if (_ticket.firstSoldPrice != -1) {
@@ -456,7 +444,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     uint8 constant CHECK_OPT_USE_GROUP     = 0x02;
     uint8 constant CHECK_OPT_USE_MAX_PRICE = 0x04;
 
-    function checkSaleTicketsLogic(address _publisher, uint _eventId, uint8 _buyOptions, address _owner, uint8 _groupId, uint32 _maxPrice)
+    function checkSaleTicketsLogic(address _publisher, uint _eventId, uint8 _buyOptions, address _owner, uint8 _groupId, uint32 _maxPrice) private
     returns (uint, uint32)
     {
         publishEventTicket[] memory _tickets = publishEventTickets[_publisher][_eventId];
@@ -469,10 +457,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
             if (_ticket.owner != msg.sender) {
                 continue;
             }
-            if (!_ticket.sale) {
-                continue;
-            }
-            if (_ticket.status != TS_BUY) {
+            if ((_ticket.status & (TS_SALE|TS_BUY)) == (TS_SALE|TS_BUY)) {
                 continue;
             }
             if ((_buyOptions & CHECK_OPT_USE_OWNER) != 0 && _ticket.owner != _owner) {
@@ -524,10 +509,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
             if (_ticket.owner != msg.sender) {
                 continue;
             }
-            if (!_ticket.sale) {
-                continue;
-            }
-            if (_ticket.status != TS_BUY) {
+            if ((_ticket.status & (TS_SALE|TS_BUY)) == (TS_SALE|TS_BUY)) {
                 continue;
             }
             if ((_buyOptions & BUY_OPT_USE_OWNER) != 0 && _ticket.owner != _ticketOwner) {
@@ -564,7 +546,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
             if (_ticket.firstSoldPrice == -1) {
                _ticket.firstSoldPrice = int64(_ticket.price);
             }
-            _ticket.sale = false;
+            _ticket.status &= ~TS_SALE;
             _ticket.owner = msg.sender;
             _ticket.version++;
         }
@@ -583,7 +565,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
         var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
-        require(_ticket.status == TS_BUY);
+        require((_ticket.status & TS_BUY) != 0);
         _ticket.price = _price;
         _ticket.version++;
     }
@@ -594,8 +576,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
         var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
-        require(_ticket.status == TS_BUY);
-        _ticket.sale = true;
+        require((_ticket.status & TS_BUY) != 0);
+        _ticket.status |= TS_SALE;
         _ticket.version++;
     }  
 
@@ -605,11 +587,12 @@ contract ETicketToken is StandardToken, Ownable, Random {
         var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
-        require(_ticket.status == TS_BUY);
+        require((_ticket.status & TS_BUY) != 0);
+        require(balances[_publisher] > uint(_ticket.firstSoldPrice));
         balances[msg.sender] += uint256(_ticket.firstSoldPrice);        
         balances[_publisher] -= uint256(_ticket.firstSoldPrice);        
         _ticket.price = uint32(_ticket.firstSoldPrice);
-        _ticket.sale = true;
+        _ticket.status |= TS_SALE;
         _ticket.owner = _publisher;
         _ticket.version++;
     }
@@ -620,25 +603,53 @@ contract ETicketToken is StandardToken, Ownable, Random {
         var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
-        require(_ticket.status == TS_BUY);
-        _ticket.sale = false;
+        require((_ticket.status & TS_BUY) != 0);
+        _ticket.status &= ~TS_SALE;
         _ticket.owner = _to;
         _ticket.version++;
     }
 
-
-
-    // join enter operation
-    function join(address _publisher, uint _eventId, uint _ticketId) {
-        
+    function joinEvent(address _publisher, uint _eventId, uint _ticketId) 
+    ticketExists(_publisher, _eventId, _ticketId) {
+        var _event = publishEvents[_publisher][_eventId];
+        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
+        require(_event.status == ES_OPENED);
+        require(_ticket.owner == msg.sender);
+        require((_ticket.status & TS_BUY) != 0);
+        _ticket.joinCode = getRandomCode();
+        _ticket.status &= ~TS_BUY;
+        _ticket.status |= TS_JOIN;
+        _ticket.version++;
     }
     
     function activateCode(address _publisher, uint _eventId, uint _ticketId, string _code) {
-        
+        var _event = publishEvents[_publisher][_eventId];
+        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
+        require(_event.status == ES_OPENED);
+        require(_ticket.owner == msg.sender);
+        require((_ticket.status & TS_JOIN) != 0);
+        require(bytes(_ticket.activateOraclizeResponse).length == 0);
+        // XXXX TODO activate oracle
+        // update _ticket.activateOraclizeResponse and _ticket.version in callback
     }
     
-    function enter(address _publisher, uint _eventId, uint _ticketId) {
-        
+    function enterEvent(address _ticketOwner, uint32 _joinCode, uint _eventId, uint _ticketId) 
+    ticketExists(msg.sender, _eventId, _ticketId){
+        var _event = publishEvents[msg.sender][_eventId];
+        var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
+        require(_event.status == ES_OPENED);
+        require(_ticket.owner == _ticketOwner);
+        require((_ticket.status & TS_JOIN) != 0);
+        require(_ticket.joinCode == _joinCode);
+        if (bytes(_event.enterOraclizeUrl).length == 0) {
+            _ticket.enterCode = getRandomCode();
+            _ticket.status &= ~TS_JOIN;
+            _ticket.status |= TS_ENTER;  
+            _ticket.version++;
+        } else {
+            // XXXX TODO enter oracle
+            // update _ticket.entercode and _ticket.enterOraclizeResponse and _ticket.status snf _ticket version in callback
+        }
     }
     
 }
