@@ -162,7 +162,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     // user ref operation
     function getUserRefsMaxId() 
     returns (uint) {
-        return eventRefs.length - 1;
+        return userRefs.length - 1;
     }
 
     function getUserRef(uint _userRefId) 
@@ -284,8 +284,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
         (_found, _isNull, _value) = finder.findString("place");
         require(_found && !_isNull && _value.length != 0);
         // create publish event
-        var _eventId = publishEvents[msg.sender].length;
-        publishEvents[msg.sender].push(publishEvent ({
+        var events = publishEvents[msg.sender];
+        var _eventId = events.length;
+        events.push(publishEvent ({
             name: _name,
             attributes: _attributes,
             cashBackOraclizeUrl: "",
@@ -400,15 +401,17 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return (_ticket.firstSoldPrice, _ticket.owner, _ticket.cashBackOraclizeResponse, _ticket.version);
     }
 
-    function createPublishEventTicketGroup(uint _eventId, uint _amount, uint32 _price) 
-    eventExists(msg.sender, _eventId) {
+    function createPublishEventTicketGroupLogic(uint _eventId, uint _amount, uint32 _price)  {
         require(_amount != 0);
         var _event = publishEvents[msg.sender][_eventId];
         require(_price <= _event.maxPrice);
+        var _tickets = publishEventTickets[msg.sender][_eventId];
         var _groupId = _event.groupCount;
+        uint _ticketId;
+        var _ticketRefs = userTicketRefs[msg.sender];
         for (uint i = 0; i < _amount; i++) {
-            var _ticketId = publishEventTickets[msg.sender][_eventId].length;
-            publishEventTickets[msg.sender][_eventId].push(publishEventTicket({
+            _ticketId = _tickets.length;
+            _tickets.push(publishEventTicket({
                 groupId: _groupId,
                 owner: msg.sender,
                 firstSoldPrice: -1,
@@ -421,13 +424,18 @@ contract ETicketToken is StandardToken, Ownable, Random {
                 version: 0
             }));
             // create user ticket ref
-            userTicketRefs[msg.sender].push(userTicketRef ({
+            _ticketRefs.push(userTicketRef ({
                 publisher: msg.sender,
                 eventId: _eventId,
                 ticketId: _ticketId
             }));
             _event.groupCount++;
         }
+    }
+
+    function createPublishEventTicketGroup(uint _eventId, uint _amount, uint32 _price) 
+    eventExists(msg.sender, _eventId) {
+        return createPublishEventTicketGroupLogic(_eventId, _amount, _price); 
     }
 
     function getSummaryPublishEventTickets(uint _eventId)
