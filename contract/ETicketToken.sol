@@ -49,10 +49,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
         address owner;
         int64   firstSoldPrice;
         uint32  price;
-        string  activateOraclizeResponse;
-        string  enterOraclizeResponse;
+        string  cashBackOraclizeResponse;
+        uint32  cashBack;
+        string  joinOraclizeResponse;
         uint32  joinCode;
-        uint32  enterCode;
         uint8   status;
         uint64  version;
     }
@@ -62,8 +62,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
     struct publishEvent {
         string name;
         string attributes;
-        string activateOraclizeUrl;
-        string enterOraclizeUrl;
+        string cashBackOraclizeUrl;
+        string joinOraclizeUrl;
         uint32 maxPrice;
         uint8  status;
         uint groupCount;
@@ -288,8 +288,8 @@ contract ETicketToken is StandardToken, Ownable, Random {
         publishEvents[msg.sender].push(publishEvent ({
             name: _name,
             attributes: _attributes,
-            activateOraclizeUrl: "",
-            enterOraclizeUrl: "",
+            cashBackOraclizeUrl: "",
+            joinOraclizeUrl: "",
             maxPrice :_maxPrice,
             status: ES_OPENED,
             groupCount: 0,
@@ -330,14 +330,14 @@ contract ETicketToken is StandardToken, Ownable, Random {
     eventExists(msg.sender, _eventId) 
     returns (string, string) {
         var _event = publishEvents[msg.sender][_eventId];
-        return (_event.activateOraclizeUrl, _event.enterOraclizeUrl);
+        return (_event.cashBackOraclizeUrl, _event.joinOraclizeUrl);
     }
     
-    function setOraclizeUrlPublishEvent(uint _eventId, string _activateOraclizeUrl, string _enterOraclizeUrl)
+    function setOraclizeUrlPublishEvent(uint _eventId, string _cashBackOraclizeUrl, string _joinOraclizeUrl)
     eventExists(msg.sender, _eventId) {
         var _event = publishEvents[msg.sender][_eventId];
-        _event.activateOraclizeUrl = _activateOraclizeUrl;
-        _event.enterOraclizeUrl = _enterOraclizeUrl;
+        _event.cashBackOraclizeUrl = _cashBackOraclizeUrl;
+        _event.joinOraclizeUrl = _joinOraclizeUrl;
     }
     
     function stopPublishEvent(uint _eventId) 
@@ -373,17 +373,23 @@ contract ETicketToken is StandardToken, Ownable, Random {
         return publishEventTickets[_address][_eventId].length - 1;
     }
 
+    function getPublishEventTicketValidation(address _address, uint _eventId, uint _ticketId) private 
+    ticketExists(_address, _eventId, _ticketId)
+    returns (bool) {
+        return true;
+    }
+
     function getPublishEventTicketLogic(address _address, uint _eventId, uint _ticketId) private
-    returns (uint, uint32, string, uint32, uint32, uint8, uint64) {
+    returns (uint, uint32, uint32, string, uint32, uint8, uint64) {
+        require(getPublishEventTicketValidation(_address, _eventId, _ticketId) == true);
         var _ticket = publishEventTickets[_address][_eventId][_ticketId];
         require(_address == msg.sender);
         require(_address == _ticket.owner);
-        return (_ticket.groupId, _ticket.price, _ticket.enterOraclizeResponse, _ticket.joinCode, _ticket.enterCode, _ticket.status _ticket.version);
+        return (_ticket.groupId, _ticket.price, _ticket.cashBack, _ticket.joinOraclizeResponse, _ticket.joinCode, _ticket.status _ticket.version);
     }
     
     function getPublishEventTicket(address _address, uint _eventId, uint _ticketId) 
-    ticketExists(_address, _eventId, _ticketId)
-    returns (uint, uint32, string, uint32, uint32, uint8, uint64) {
+    returns (uint, uint32, uint32, string, uint32, uint8, uint64) {
         return getPublishEventTicketLogic(_address, _eventId, _ticketId);
     }
 
@@ -391,7 +397,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     ticketExists(msg.sender, _eventId, _ticketId) 
     returns (int64, address, string, uint64) {
         var _ticket = publishEventTickets[msg.sender][_eventId][_ticketId];
-        return (_ticket.firstSoldPrice, _ticket.owner,  _ticket.activateOraclizeResponse, _ticket.version);
+        return (_ticket.firstSoldPrice, _ticket.owner, _ticket.cashBackOraclizeResponse, _ticket.version);
     }
 
     function createPublishEventTicketGroup(uint _eventId, uint _amount, uint32 _price) 
@@ -407,10 +413,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
                 owner: msg.sender,
                 firstSoldPrice: -1,
                 price: _price,
-                activateOraclizeResponse: "",
-                enterOraclizeResponse: "",
+                cashBackOraclizeResponse: "",
+                cashBack: 0,
+                joinOraclizeResponse: "",
                 joinCode : 0,
-                enterCode : 0,
                 status: TS_SALE|TS_BUY,
                 version: 0
             }));
@@ -637,21 +643,15 @@ contract ETicketToken is StandardToken, Ownable, Random {
         require(_event.status == ES_OPENED);
         require(_ticket.owner == msg.sender);
         require((_ticket.status & TS_BUY) != 0);
-        _ticket.joinCode = getRandomCode();
-        _ticket.status &= ~TS_BUY;
-        _ticket.status |= TS_JOIN;
-        _ticket.version++;
-    }
-    
-    function activateCode(address _publisher, uint _eventId, uint _ticketId, string _code) {
-        var _event = publishEvents[_publisher][_eventId];
-        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
-        require(_event.status == ES_OPENED);
-        require(_ticket.owner == msg.sender);
-        require((_ticket.status & TS_JOIN) != 0);
-        require(bytes(_ticket.activateOraclizeResponse).length == 0);
-        // XXXX TODO activate oracle
-        // update _ticket.activateOraclizeResponse and _ticket.version in callback
+        if (bytes(_event.joinOraclizeUrl).length == 0) {
+            _ticket.joinCode = getRandomCode();
+            _ticket.status &= ~TS_BUY;
+            _ticket.status |= TS_JOIN;
+            _ticket.version++;
+        } else {
+            // XXXX TODO enter oracle
+            // update _ticket.joinCode and _ticket.joinOraclizeResponse and _ticket.status snf _ticket version in callback
+        }
     }
     
     function enterEvent(address _ticketOwner, uint32 _joinCode, uint _eventId, uint _ticketId) 
@@ -662,15 +662,20 @@ contract ETicketToken is StandardToken, Ownable, Random {
         require(_ticket.owner == _ticketOwner);
         require((_ticket.status & TS_JOIN) != 0);
         require(_ticket.joinCode == _joinCode);
-        if (bytes(_event.enterOraclizeUrl).length == 0) {
-            _ticket.enterCode = getRandomCode();
-            _ticket.status &= ~TS_JOIN;
-            _ticket.status |= TS_ENTER;  
-            _ticket.version++;
-        } else {
-            // XXXX TODO enter oracle
-            // update _ticket.entercode and _ticket.enterOraclizeResponse and _ticket.status snf _ticket version in callback
-        }
+        _ticket.status &= ~TS_JOIN;
+        _ticket.status |= TS_ENTER;  
+        _ticket.version++;
+    }
+    
+    function activateCacheBackCode(address _publisher, uint _eventId, uint _ticketId, string _code) {
+        var _event = publishEvents[_publisher][_eventId];
+        var _ticket = publishEventTickets[_publisher][_eventId][_ticketId];
+        require(_event.status == ES_OPENED);
+        require(_ticket.owner == msg.sender);
+        require((_ticket.status & (TS_JOIN | TS_ENTER)) != 0);
+        require(bytes(_ticket.cashBackOraclizeResponse).length == 0);
+        // XXXX TODO activate oracle
+        // update _ticket.activateOraclizeResponse and _ticket.version in callback
     }
     
 }
