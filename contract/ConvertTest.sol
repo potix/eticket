@@ -4,12 +4,12 @@ import './Convert.sol';
 
 library ConvertTest {
 	function test1() returns (uint, string) {
-		bytes32  b = 255;
+		bytes32  b = 254;
 		return (uint(b), Convert.bytes32ToHexString(b));
 	}
 
 	function test2() returns (uint, string) {
-		bytes32  b = 65535;
+		bytes32  b = 65534;
 		return (uint(b), Convert.bytes32ToHexString(b));
 	}
 	
