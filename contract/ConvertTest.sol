@@ -2,7 +2,7 @@ pragma solidity ^0.4.11;
 
 import './Convert.sol';
 
-library ConvertTest {
+contract ConvertTest {
 	function test1() returns (uint, string) {
 		bytes32  b = 254;
 		return (uint(b), Convert.bytes32ToHexString(b));
