@@ -26,6 +26,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
     // requireでエラー起こすより、リターンコード定義して返したほうがいい
     // requireは状態変更したが、入力的におかしい場合に留める
 
+    // 全体的にgasと高速化を考慮して書き直す
+    // チケットcontextはjoinしたら作成するようにする
+
     using ValueFinder for ValueFinder.finder;
          
     string public name;
@@ -687,6 +690,4 @@ contract ETicketToken is StandardToken, Ownable, Random {
     }
     
 }
-
-
 
