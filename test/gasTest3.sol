@@ -65,7 +65,11 @@ contract gasTestArray {
     }
     value[] values;
     uint valuesIndex;
-
+    
+    function getInitLength() returns (uint) {
+        return values.length;
+    }
+    
     function setString1(string _value1, string _value2, string _value3){
         values.push(value({
            value1: _value1, 
@@ -74,23 +78,6 @@ contract gasTestArray {
         }));
     }
 
-    function setString2(string _value1, string _value2, string _value3){
-        values[0] = value({
-           value1: _value1, 
-           value2: _value2, 
-           value3: _value3 
-        });
-    }
-
-    function setString3(string _value1, string _value2, string _value3){
-        values[valuesIndex] = value({
-           value1: _value1, 
-           value2: _value2, 
-           value3: _value3 
-        });
-        valuesIndex++;
-    }
-    
     function getString1() returns (string, string, string) {
         return (values[0].value1,  values[0].value2, values[0].value3);
     }
@@ -105,12 +92,6 @@ contract gasTestArray {
 // setString1
 //    Transaction cost: 105844 gas. 
 //    Execution cost: 82460 gas.
-// setString2
-//    Transaction cost: 55773 gas. 
-//    Execution cost: 32389 gas.
-// setString3
-//    Transaction cost: 75932 gas. 
-//    Execution cost: 52548 gas.
 // getString1
 //    Transaction cost: 24459 gas. 
 //    Execution cost: 3187 gas.
@@ -217,8 +198,61 @@ contract gasTestMappingSha3 {
 //    Transaction cost: 24753 gas. 
 //    Execution cost: 3481 gas.
 
+contract gasTestMappingSha3Struct {
 
+    struct value {
+        string value1;
+        string value2;
+        string value3;
+    }
 
+    mapping(bytes32 => value) values;
+    uint valuesIndex;
 
+    function preSetString1(string _value1, string _value2, string _value3){
+        values[sha3(valuesIndex)].value1 = _value1;
+        values[sha3(valuesIndex)].value2 = _value2;
+        values[sha3(valuesIndex)].value3 = _value3;
+    }
+
+    function setString1(string _value1, string _value2, string _value3){
+        values[sha3(valuesIndex)].value1 = _value1;
+        values[sha3(valuesIndex)].value2 = _value2;
+        values[sha3(valuesIndex)].value3 = _value3;
+        valuesIndex++;
+    }
+
+    function setString2(string _value1, string _value2, string _value3){
+        values[sha3(valuesIndex)] = value({
+            value1 : _value1,
+            value2 : _value2,
+            value3 : _value3
+        });
+        valuesIndex++;
+    }
+
+    function getString1() returns (string, string, string) {
+        return (values[sha3(valuesIndex)].value1,  values[sha3(valuesIndex)].value2 , values[sha3(valuesIndex)].value3 );
+    }
+
+    function getString2() returns (string, string, string) {
+        var v = values[sha3(valuesIndex)]; 
+        return (v.value1,  v.value2, v.value3);
+    }
+}
+
+// input "aaa", "bbb", "ccc"
+// setString1
+//    Transaction cost: 106096 gas. 
+//    Execution cost: 82712 gas.
+// setString2
+//    Transaction cost: 105792 gas. 
+//    Execution cost: 82408 gas.
+// getString1
+//     Transaction cost: 24715 gas. 
+//     Execution cost: 3443 gas.
+// getString2
+//     Transaction cost: 24200 gas. 
+//     Execution cost: 2928 gas.
 
 
