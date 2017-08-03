@@ -29,6 +29,10 @@ contract ETicketToken is StandardToken, Ownable, Random {
     // 全体的にgasと高速化を考慮して書き直す
     // チケットcontextはjoinしたら作成するようにする
 
+    // えんどゆーざかんでの売買をかのうにするか
+    // かかくへんこうをかのうにするか
+    // すてーととできることを整理
+
     using ValueFinder for ValueFinder.finder;
          
     string public name;
@@ -690,4 +694,7 @@ contract ETicketToken is StandardToken, Ownable, Random {
     }
     
 }
+
+
+
 
