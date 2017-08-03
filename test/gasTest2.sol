@@ -82,5 +82,51 @@ contract gasTestStruct2 {
 //   Transaction cost: 23956 gas. 
 //   Execution cost: 2684 gas.
 
+contract getTestStatuctMapping {
+    struct value {
+        string value1;
+        string value2;
+        string value3;
+    }
+    value sv;
+    mapping (string => string) mv;
+
+    function setStruct(string _value1, string _value2, string _value3) {
+        sv.value1 = _value1; 
+        sv.value2 = _value2; 
+        sv.value3 = _value3; 
+    }
+
+    function getStruct() returns (string _value1, string _value2, string _value3) {
+        return (sv.value1, sv.value2 = _value2, sv.value3); 
+    }
+
+    function setMapping(string _value1, string _value2, string _value3) {
+        mv["value1"] = _value1;  
+        mv["value2"] = _value2;  
+        mv["value3"] = _value3;  
+    }
+
+    function getMapping() returns (string _value1, string _value2, string _value3) {
+        return (mv["value1"], mv["value2"], mv["value2"]);
+    }
+    
+}
+
+// input "aaa", "bbb", "ccc"
+// setStruct
+//    Transaction cost: 85291 gas. 
+//    Execution cost: 61907 gas.
+// setMapping
+//    Transaction cost: 85628 gas. 
+//    Execution cost: 62244 gas.
+// getStruct
+//    Transaction cost: 29070 gas. 
+//    Execution cost: 7798 gas.
+// getMapping
+//    Transaction cost: 24331 gas. 
+//    Execution cost: 3059 gas.
+
+
 
 
