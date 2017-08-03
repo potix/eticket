@@ -33,6 +33,9 @@ contract ETicketToken is StandardToken, Ownable, Random {
     // かかくへんこうをかのうにするか
     // すてーととできることを整理
 
+    // joinもenterもきねんもらえればいい
+    // joinは共通 enterは個別みたいな
+
     using ValueFinder for ValueFinder.finder;
          
     string public name;
