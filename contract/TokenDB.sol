@@ -2,14 +2,40 @@ pragma solidity ^0.4.14;
 
 import "./ContractAllowable.sol";
 import "./SafeMath.sol";
-import "./Ownable.sol";
-    
+
 contract TokenDB is ContractAllowable {
     using SafeMath for uint256;    
 
-    uint256 public totalSupply = 0;
+    bytes32 name;
+    bytes32 symbol;
+    uint decimals = 18;
+    uint256 totalSupply = 0;
     mapping (address => mapping (address => uint256)) allowed;
     mapping(address => uint256) balances;
+    
+    function getName() constant returns (bytes32) {
+        return name;
+    }
+
+    function setName(bytes32 _name) onlyAllowContractOrOwner {
+        name = _name;        
+    }
+
+    function getSymbol() constant returns (bytes32) {
+        return symbol;
+    }
+
+    function setSymbol(bytes32 _symbol) onlyAllowContractOrOwner {
+        symbol = _symbol;        
+    }
+
+    function getDecimals() constant returns (uint) {
+        return decimals;
+    }
+
+    function setDecimals(uint _decimals) onlyAllowContractOrOwner {
+        decimals = _decimals;        
+    }
     
     function getTotalSupply() constant returns (uint256) {
         return totalSupply;

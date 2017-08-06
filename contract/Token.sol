@@ -1,15 +1,11 @@
 pragma solidity ^0.4.14;
 
 import "./TokenInterface.sol";
-import "./TokenLibrary.sol";
 import "./Ownable.sol";
+import "./TokenDB.sol";
+import "./Converter.sol";
 
 contract Token is ERC20Interface, TokenInterface, Ownable {
-    using TokenLibrary for address;
-
-    string public name;
-    string public symbol;
-    uint public decimals = 18;
     address public tokenDB;
     
     function Token(address _tokenDB) {
@@ -17,50 +13,151 @@ contract Token is ERC20Interface, TokenInterface, Ownable {
         tokenDB = _tokenDB;
     }
 
+    /**
+     * @dev Get name
+     * @return The name.
+     */
+    function name() constant returns (string) {
+        return Converter.bytes32ToString(TokenDB(tokenDB).getName());    
+    }
+
+    /**
+     * @dev Set name
+     * @param _name The name.
+     */
+    function setName(string _name) onlyOwner returns (bool) {
+        TokenDB(tokenDB).setName(Converter.stringToBytes32(_name));
+        return true;
+    }
+
+    /**
+     * @dev Get symbol
+     * @return The symbol.
+     */
+    function symbol() constant returns (string) {
+        return Converter.bytes32ToString(TokenDB(tokenDB).getSymbol());    
+    }
+
+    /**
+     * @dev Set symbol
+     * @param _symbol The symbol.
+     */
+    function setSymbol(string _symbol) onlyOwner returns (bool) {
+        TokenDB(tokenDB).setSymbol(Converter.stringToBytes32(_symbol));
+        return true;
+    }
+
+    /**
+     * @dev Get decimals
+     * @return The decimals.
+     */
+    function decimals() constant returns (uint) {
+        return TokenDB(tokenDB).getDecimals();    
+    }
+
+    /**
+     * @dev Set decimals
+     * @param _decimals The decimals.
+     */
+    function setDecimals(uint _decimals) onlyOwner returns (bool) {
+        TokenDB(tokenDB).setDecimals(_decimals);
+        return true;
+    }
+
+    /**
+     * @dev Get total supply
+     * @return The total supply.
+     */
     function totalSupply() constant returns (uint256) {
-        return tokenDB.totalSupply();    
+        return TokenDB(tokenDB).getTotalSupply();    
     }
 
-    function initSupply(uint256 _totalSupply) onlyOwner returns  (bool) {
-        return tokenDB.initSupply(_totalSupply);    
+    /**
+     * @dev Initialize total supply
+     * @param _supply The supply.
+     */
+    function initSupply(uint256 _supply) onlyOwner returns  (bool) {
+        TokenDB(tokenDB).initTotalSupply(msg.sender, _supply);
+        return true;
     }
     
+    /**
+     * @dev Increase total supply
+     * @param _supply The additinal supply.
+     */
     function increaseSupply(uint256 _supply) onlyOwner returns  (bool) {
-        var _success = tokenDB.increaseSupply(_supply);
-        Mint(msg.sender, _supply);
-        return _success;
-    }
-    
-    function decreaseSupply(uint256 _supply) onlyOwner returns  (bool) {
-        var _success = tokenDB.decreaseSupply(_supply);    
-        Burn(msg.sender, _supply);
-        return _success;
+        TokenDB(tokenDB).addTotalSupply(msg.sender, _supply);
+        return true;
     }
 
+    /**
+     * @dev decrease total supply
+     * @param _supply The subtractional supply.
+     */
+    function decreaseSupply(uint256 _supply) onlyOwner returns  (bool) {
+        TokenDB(tokenDB).subTotalSupply(msg.sender, _supply);
+        return true;
+    }
+
+    /**
+     * @dev transfer token for a specified address
+     * @param _to The address to transfer to.
+     * @param _value The amount to be transferred.
+     */
     function transfer(address _to, uint256 _value) returns (bool) {
-        var _success = tokenDB.transfer(_to, _value);
+        TokenDB(tokenDB).subBalance(msg.sender, _value);
+        TokenDB(tokenDB).addBalance(_to, _value);
         Transfer(msg.sender, _to, _value);
-        return _success;
+        return true;
     }
     
+    /**
+     * @dev Gets the balance of the specified address.
+     * @param _owner The address to query the the balance of. 
+     * @return An uint256 representing the amount owned by the passed address.
+     */   
     function balanceOf(address _owner) constant returns (uint256) {
-        return tokenDB.balanceOf(_owner);    
+        return TokenDB(tokenDB).getBalance(_owner);   
     }
     
+    /**
+     * @dev Transfer tokens from one address to another
+     * @param _from address The address which you want to send tokens from
+     * @param _to address The address which you want to transfer to
+     * @param _value uint256 the amout of tokens to be transfered
+     */    
     function transferFrom(address _from, address _to, uint256 _value) returns (bool) {
-        var _success = tokenDB.transferFrom(_from, _to, _value);
+        TokenDB(tokenDB).addBalance(_to, _value);
+        TokenDB(tokenDB).subBalance(_from, _value);
+        TokenDB(tokenDB).subAllowance(_from, msg.sender, _value);
         Transfer(_from, _to, _value);
-        return _success;
+        return true;
     }
-    
+ 
+    /**
+    * @dev Aprove the passed address to spend the specified amount of tokens on behalf of msg.sender.
+    * @param _spender The address which will spend the funds.
+    * @param _value The amount of tokens to be spent.
+    */    
     function approve(address _spender, uint256 _value) returns (bool) {
-        var _success = tokenDB.approve(_spender, _value);
+        // To change the approve amount you first have to reduce the addresses`
+        //  allowance to zero by calling `approve(_spender, 0)` if it is not
+        //  already 0 to mitigate the race condition described here:
+        //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+        require((_value == 0) || (TokenDB(tokenDB).getAllowance(msg.sender, _spender) == 0));
+        TokenDB(tokenDB).setAllowance(msg.sender, _spender, _value);
         Approval(msg.sender, _spender, _value);
-        return _success;
+        return true;
     }
-    
+
+    /**
+     * @dev Function to check the amount of tokens that an owner allowed to a spender.
+     * @param _owner address The address which owns the funds.
+     * @param _spender address The address which will spend the funds.
+     * @return A uint256 specifing the amount of tokens still available for the spender.
+     */    
     function allowance(address _owner, address _spender) constant returns (uint256) {
-        return tokenDB.allowance(_owner, _spender);
+        return TokenDB(tokenDB).getAllowance(_owner, _spender);
     }
 }
 
