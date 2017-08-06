@@ -2,7 +2,7 @@ pragma solidity ^0.4.14;
 
 import "./ContractAllowable.sol";
 
-contract EticketDB is ContractAllowable {
+contract TicketDB is ContractAllowable {
     mapping(bytes32 => uint256) ids;
 
     function getLastId(bytes32 key) constant returns (uint256) {
@@ -35,3 +35,4 @@ contract EticketDB is ContractAllowable {
         return strings[key];
     }
 }
+
