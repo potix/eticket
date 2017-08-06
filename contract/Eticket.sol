@@ -18,8 +18,17 @@ contract Eticket is EticketInterface, Token {
     }
 
     function createUser(string _name, string _email, string _profile) returns (uint256, bool) {
-        return ticketDB.createUSer(_name, _email, _profile);
+            // userId
+            // user.name
+            // user.email
+            // user.pprofile
+            var userId = EticketDB(_eticketDB).getAndIncrementId(sha3("userId"));
+            EticketDB(_eticketDB).setString(sha3("user.name", userId));
+            EticketDB(_eticketDB).setString(sha3("user.email", userId));
+            EticketDB(_eticketDB).setString(sha3("user.profile", userId));
+            return true;
     }
     
 }
+
 
