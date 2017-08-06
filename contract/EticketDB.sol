@@ -12,7 +12,7 @@ contract EticketDB is ContractAllowable {
     function getAndIncrementId(bytes32 key) onlyAllowContractOrOwner returns (uint256) {
         var _v = ids[key];
         ids[key] = _v + 1;
-        return (_v, true);
+        return _v;
     }
     
     function getIdArray(bytes32 key) constant returns (uint256[]) {
