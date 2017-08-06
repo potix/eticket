@@ -11,11 +11,6 @@ contract ERC20Interface {
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }
 
-// constract ERC667Interface {
-//     function approveAndCall(address receiver, uint amount, bytes data) returns (bool success);
-//     function receiveApproval(address from, uint256 amount, address token, bytes data) returns (bool success)
-// }
-
 contract TokenInterface {
     function name() constant returns (string);
     function symbol() constant returns (string);
@@ -23,10 +18,15 @@ contract TokenInterface {
     function setName(string _name) returns (bool);
     function setSymbol(string _symbol) returns (bool);
     function setDecimals(uint _decimals) returns (bool);
-    function initSupply(uint256 _supply) returns (bool); 
     function increaseSupply(uint256 _supply) returns (bool); 
-    function decreaseSupply(uint256 _supply) returns (bool); 
+    function decreaseSupply(uint256 _supply) returns (bool);
+    function minting() constant returns (bool);
+    function mint(address _to, uint256 _amount) returns (bool);
+    function enableMinting() returns (bool);
+    function disableMinting() returns (bool);
     event Mint(address indexed _owner, uint256 _value);
     event Burn(address indexed _owner, uint256 _value);
+    event EnableMinting();
+    event DisableMinting();
 }
 

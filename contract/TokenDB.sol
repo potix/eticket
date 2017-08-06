@@ -10,6 +10,7 @@ contract TokenDB is ContractAllowable {
     bytes32 symbol;
     uint decimals = 18;
     uint256 totalSupply = 0;
+    bool minting = false; 
     mapping (address => mapping (address => uint256)) allowed;
     mapping(address => uint256) balances;
     
@@ -41,22 +42,24 @@ contract TokenDB is ContractAllowable {
         return totalSupply;
     }
     
-    function initTotalSupply(address _owner, uint256 _totalSupply) onlyAllowContractOrOwner {
-        require(_owner == owner && totalSupply == 0);
-        totalSupply = _totalSupply;
-        balances[_owner] = _totalSupply;
-    }
-    
-    function addTotalSupply(address _owner, uint256 _addSupply) onlyAllowContractOrOwner {
-        require(_owner == owner);
+    function addTotalSupply(uint256 _addSupply) onlyAllowContractOrOwner {
         totalSupply = totalSupply.add(_addSupply);
-        balances[_owner] = balances[_owner].add(_addSupply);
     }
     
-    function subTotalSupply(address _owner, uint256 _subSupply) onlyAllowContractOrOwner {
-        require(_owner == owner);
+    function subTotalSupply(uint256 _subSupply) onlyAllowContractOrOwner {
         totalSupply = totalSupply.sub(_subSupply);
-        balances[_owner] = balances[_owner].sub(_subSupply);
+    }
+
+    function getMinting() constant returns (bool) {
+        return minting;
+    }
+
+    function enableMinting() onlyAllowContractOrOwner {
+        minting = true;
+    }
+
+    function disableMinting() onlyAllowContractOrOwner {
+        minting = false;
     }
     
     function getBalance(address _address) constant returns (uint256) {

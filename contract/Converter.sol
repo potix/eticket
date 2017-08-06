@@ -21,8 +21,7 @@ library Converter {
 
 	function bytes32ToString(bytes32 _b) internal returns (string) {
 		bytes memory _bs = new bytes(32);
-		uint i;
-		for (i = 0; i < 32; i++) {
+		for (uint i = 0; i < 32; i++) {
 			var c = _b[i];
 			if (c == 0) {
 				delete _bs[i];

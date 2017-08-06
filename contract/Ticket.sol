@@ -8,27 +8,25 @@ contract Ticket is TicketInterface, Token {
     address ticketDB;
     
     function Ticket(address _tokenDB, address _ticketDB) Token(_tokenDB) {
-        require(_ticketDB != address(0));
-        eticketDB = _ticketDB;
+        require(_ticketDB != 0x0);
+        ticketDB = _ticketDB;
     }
 
-    function initialize() onlyOwner {
-        setName("EticketToken");
-        setSymbol("XET");
-        setDecimals(18);
-        initSupply(1000000000000000); 
+    function removeTicketDB() onlyOwner returns (bool) {
+        ticketDB = address(0);
+        return true;
     }
 
     function createUser(string _name, string _email, string _profile) returns (uint256) {
-            // userId
-            // user.name
-            // user.email
-            // user.pprofile
-            var userId = EticketDB(eticketDB).getAndIncrementId(sha3("userId"));
-            EticketDB(eticketDB).setString(sha3("user.name", userId), _name);
-            EticketDB(eticketDB).setString(sha3("user.email", userId), _email);
-            EticketDB(eticketDB).setString(sha3("user.profile", userId), _profile);
-            return (userId);
+        // userId
+        // user.name
+        // user.email
+        // user.pprofile
+        var userId = TicketDB(ticketDB).getAndIncrementId(sha3("userId"));
+        TicketDB(ticketDB).setString(sha3("user.name", userId), _name);
+        TicketDB(ticketDB).setString(sha3("user.email", userId), _email);
+        TicketDB(ticketDB).setString(sha3("user.profile", userId), _profile);
+        return (userId);
     }
 }
 

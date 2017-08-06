@@ -1,16 +1,21 @@
 pragma solidity ^0.4.14;
 
 import "./TokenInterface.sol";
-import "./Ownable.sol";
+import "./ContractAllowable.sol";
 import "./TokenDB.sol";
 import "./Converter.sol";
 
-contract Token is ERC20Interface, TokenInterface, Ownable {
+contract Token is ERC20Interface, TokenInterface, ContractAllowable {
     address public tokenDB;
 
     function Token(address _tokenDB) {
-        require(_tokenDB != address(0));
+        require(_tokenDB != 0x0);
         tokenDB = _tokenDB;
+    }
+    
+    function removeTokenDB() onlyOwner returns (bool) {
+        tokenDB = address(0);
+        return true;
     }
 
     /**
@@ -73,29 +78,22 @@ contract Token is ERC20Interface, TokenInterface, Ownable {
     }
 
     /**
-     * @dev Initialize total supply
-     * @param _supply The supply.
-     */
-    function initSupply(uint256 _supply) onlyOwner returns  (bool) {
-        TokenDB(tokenDB).initTotalSupply(msg.sender, _supply);
-        return true;
-    }
-    
-    /**
      * @dev Increase total supply
-     * @param _supply The additinal supply.
+     * @param _amount The additinal supply amount.
      */
-    function increaseSupply(uint256 _supply) onlyOwner returns  (bool) {
-        TokenDB(tokenDB).addTotalSupply(msg.sender, _supply);
+    function increaseSupply(uint256 _amount) onlyOwner returns  (bool) {
+        TokenDB(tokenDB).addTotalSupply(_amount);
+        TokenDB(tokenDB).addBalance(msg.sender, _amount);
         return true;
     }
 
     /**
      * @dev decrease total supply
-     * @param _supply The subtractional supply.
+     * @param _amount The subtractional supply amount.
      */
-    function decreaseSupply(uint256 _supply) onlyOwner returns  (bool) {
-        TokenDB(tokenDB).subTotalSupply(msg.sender, _supply);
+    function decreaseSupply(uint256 _amount) onlyOwner returns  (bool) {
+        TokenDB(tokenDB).subTotalSupply(_amount);
+        TokenDB(tokenDB).subBalance(msg.sender, _amount);
         return true;
     }
 
@@ -160,6 +158,48 @@ contract Token is ERC20Interface, TokenInterface, Ownable {
      */    
     function allowance(address _owner, address _spender) constant returns (uint256) {
         return TokenDB(tokenDB).getAllowance(_owner, _spender);
+    }
+    
+    /**
+     * @dev Get minting
+     * @return The minting.
+     */
+    function minting() constant returns (bool) {
+        return TokenDB(tokenDB).getMinting();
+    }
+    
+    /**
+     * @dev Function to mint tokens
+     * @param _to The address that will recieve the minted tokens.
+     * @param _amount The amount of tokens to mint.
+     * @return A boolean that indicates if the operation was successful.
+     */
+    function mint(address _to, uint256 _amount) onlyAllowContractOrOwner returns (bool) {
+        require(TokenDB(tokenDB).getMinting());
+        TokenDB(tokenDB).addTotalSupply(_amount);
+        TokenDB(tokenDB).addBalance(_to, _amount);
+        Mint(_to, _amount);
+        return true;
+    }
+
+    /**
+     * @dev Function to enable minting new tokens.
+     * @return True if the operation was successful.
+     */
+    function enableMinting() onlyOwner returns (bool) {
+        TokenDB(tokenDB).enableMinting();
+        EnableMinting();
+        return true;
+    }
+
+    /**
+     * @dev Function to disable minting new tokens.
+     * @return True if the operation was successful.
+     */
+    function disableMinting() onlyAllowContractOrOwner returns (bool) {
+        TokenDB(tokenDB).disableMinting();
+        DisableMinting();
+        return true;
     }
 }
 
