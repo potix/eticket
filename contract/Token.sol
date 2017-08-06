@@ -7,7 +7,7 @@ import "./Converter.sol";
 
 contract Token is ERC20Interface, TokenInterface, Ownable {
     address public tokenDB;
-    
+
     function Token(address _tokenDB) {
         require(_tokenDB != address(0));
         tokenDB = _tokenDB;
@@ -105,6 +105,7 @@ contract Token is ERC20Interface, TokenInterface, Ownable {
      * @param _value The amount to be transferred.
      */
     function transfer(address _to, uint256 _value) returns (bool) {
+        require(_to != address(0));
         TokenDB(tokenDB).subBalance(msg.sender, _value);
         TokenDB(tokenDB).addBalance(_to, _value);
         Transfer(msg.sender, _to, _value);
@@ -127,6 +128,7 @@ contract Token is ERC20Interface, TokenInterface, Ownable {
      * @param _value uint256 the amout of tokens to be transfered
      */    
     function transferFrom(address _from, address _to, uint256 _value) returns (bool) {
+        require(_from != address(0) && _to != address(0));
         TokenDB(tokenDB).addBalance(_to, _value);
         TokenDB(tokenDB).subBalance(_from, _value);
         TokenDB(tokenDB).subAllowance(_from, msg.sender, _value);
