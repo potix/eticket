@@ -23,4 +23,3 @@ contract Eticket is EticketInterface, Token {
     
 }
 
-
