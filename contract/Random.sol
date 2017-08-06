@@ -1,14 +1,13 @@
 pragma solidity ^0.4.14;
 
-contract Random {
-    uint256 randomNonce;
-
-    function getRandom(address _appDB) internal returns (uint) {
-        randomNonce++;
-        return uint(sha3(block.timestamp, 
-                         block.number, 
-                         block.difficulty,
-                         msg.gas,
-                         msg.sender)) * uint(sha3(randomNonce));
+library Random {
+    function getRandom() internal returns (uint) {
+        return uint(sha3(
+              block.blockhash(block.number - 1),
+              block.timestamp,
+              block.number,
+              msg.sender,
+              msg.sig));
     }
 }
+

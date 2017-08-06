@@ -12,9 +12,16 @@ contract ERC20Interface {
 }
 
 contract TokenInterface {
+    function name() constant returns (string);
+    function setName(string _name) returns (bool);
+    function symbol() constant returns (string);
+    function setSymbol(string _symbol) returns (bool);
+    function decimals() constant returns (uint);
+    function setDecimals(uint _decimals) returns (bool);
     function initSupply(uint256 _supply) returns (bool); 
     function increaseSupply(uint256 _supply) returns (bool); 
     function decreaseSupply(uint256 _supply) returns (bool); 
     event Mint(address indexed _owner, uint256 _value);
     event Burn(address indexed _owner, uint256 _value);
 }
+
