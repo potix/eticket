@@ -5,7 +5,11 @@ import "./Ownable.sol";
 contract ContractAllowable is Ownable {
     mapping(address => bool) allowContracts;
     
-    function addAllowContracts(address _allowContract) onlyOwner returns (bool) {
+    function checkAllowContract(address _allowContract) onlyOwner constant returns (bool) {
+        return allowContracts[_allowContract];
+    }
+    
+    function addAllowContract(address _allowContract) onlyOwner returns (bool) {
         if (_allowContract == address (0)) {
             return false;
         }
@@ -13,7 +17,7 @@ contract ContractAllowable is Ownable {
         return true;
     }
     
-    function deleteAllowContracts(address _allowContract) onlyOwner returns (bool) {
+    function deleteAllowContract(address _allowContract) onlyOwner returns (bool) {
         delete allowContracts[_allowContract];
         return true;
     } 
