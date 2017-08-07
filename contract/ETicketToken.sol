@@ -2,8 +2,8 @@ pragma solidity ^0.4.14;
 
 import "./Ticket.sol";
 
-contract Eticket is Ticket {
-    function Eticket(address _tokenDB, address _ticketDB) Ticket(_tokenDB, _ticketDB) {    
+contract EticketToken is Ticket {
+    function EticketToken(address _tokenDB, address _ticketDB) Ticket(_tokenDB, _ticketDB) {    
 
     }
 
@@ -16,4 +16,5 @@ contract Eticket is Ticket {
         return true;
     }
 }
+
 

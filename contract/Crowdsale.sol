@@ -1,6 +1,6 @@
 pragma solidity ^0.4.14;
 
-import './Eticket.sol';
+import './EticketToken.sol';
 import './SafeMath.sol';
 
 /**
