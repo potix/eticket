@@ -1,2 +1,2 @@
 # eticket
- Ticket buying and selling system using ethereum.
+This system is buy and sell ticket using ethereum.
