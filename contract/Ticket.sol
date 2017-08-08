@@ -85,7 +85,7 @@ contract Ticket is TicketInterface, Token {
     // users <userId> events <eventId> memorialOracleUrlOfEntered
     // users <userId> events <eventId> cashBackOracleUrl
     // users <userId> events <eventId> amountSold
-    // users <userId> events <eventId> state [ 0x01 CREATED, 0x02 PREPARE, 0x04 OPENED, 0x08 STARTED,  0x10 STOPPED, 0x20 CLOSED, 0x40 COLLECTED ]
+    // users <userId> events <eventId> state [ 0x01 CREATED, 0x02 SALED, 0x04 OPENED, 0x08 SURENESS,  0x10 STOPPED, 0x20 CLOSED, 0x40 COLLECTED ]
 
     // [event reference]
     // eventRefId
@@ -196,13 +196,13 @@ contract Ticket is TicketInterface, Token {
     }
 
     function openEvent(uint256 _eventId) {
-        // チケットを発行したらPREPAREになっている
-        // PREPAREまたはstart状態の場合
+        // チケットを発行したらSALEDになっている
+        // SALEDまたはstart状態の場合
         // OPEN状態ににする
         // reserveがenter,cashbackできるようになる
     }
 
-    function startEvent(uint256 _eventId) {
+    function surenessEvent(uint256 _eventId) {
         // open状態のときまたはcloseのときのみ
         // イベント開始が確定したら
         // 何日か前ぐらいにはスタートしておく (買い占めの嫌がらせが考えられるので余裕を持ってスタートしておくのがいい)
@@ -210,14 +210,14 @@ contract Ticket is TicketInterface, Token {
     }
 
     function stopEvent(uint256 _eventId) {
-        // openもしくはstartの場合
+        // openもしくはSURENESSの場合
         // イベントを中止せざるをえなくなったとき
         // すべての購入者へトークンの返却 これは買った人に返す。cashbackされてりいる場合その額は返却トークンから引かれる
         // これ以降の状態変更は無理
     }
 
     function closeEvent(uint256 _eventId) { // イベントを閉じる 
-        // start状態の場合のみ可能
+        // SURENESS状態の場合のみ可能
         // reservedとかenterとかcashbackとかとかできなくなる
         // close状態にする
     }
