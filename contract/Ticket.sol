@@ -413,11 +413,13 @@ contract Ticket is TicketInterface, Token {
         // チケットグループの料金を変更する
     }
 
-    function addSupplyTicket(uint256 _eventId, uint256 ticketGroupId) {
+    function addSupplyTicket(uint256 _eventId, uint256 _ticketGroupId, uint32 _amount) {
+
         // チケットグループのチケット供給量を増やす
     }
 
-    function subSupplyTicket(uint256 _eventId, uint256 ticketGroupId) {
+    function subSupplyTicket(uint256 _eventId, uint256 _ticketGroupId, uint32 _amount) {
+
         // チケットグループのチケット供給量を減らす
     }
 
