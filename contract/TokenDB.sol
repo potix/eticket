@@ -86,3 +86,4 @@ contract TokenDB is ContractAllowable {
         allowed[_owner][_spender] = allowed[_owner][_spender].sub(_value);
     }
 }
+
