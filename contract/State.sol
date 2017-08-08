@@ -1,8 +1,12 @@
 pragma solidity ^0.4.14;
 
 library State {
+    function includesState(uint32 _state, uint32 _value) internal constant returns (bool) {
+        return ((_state & _value) != 0);
+    }
+    
     function equalsState(uint32 _state, uint32 _value) internal constant returns (bool) {
-        return (_state & _value) == _value;
+        return ((_state & _value) == _value);
     }
 
     function setState(uint32 _state, uint32 _value) internal constant returns (uint32) {
@@ -17,4 +21,5 @@ library State {
         return (_state & ~_before) | _after;
     }
 }
+
 

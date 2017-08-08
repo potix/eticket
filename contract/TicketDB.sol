@@ -76,9 +76,16 @@ contract TicketDB is ContractAllowable {
     mapping(bytes32 => uint256) uint256Values;
 
     function incrementUint256(bytes32 _key) onlyAllowContractOrOwner {
-        var _v = uint256Values[_key];
-        uint256Values[_v] = _v.add(1);
+        uint256Values[_key] = uint256Values[_key].add(1);
     }
+
+    function addUint256(bytes32 _key, uint256 _value) onlyAllowContractOrOwner {
+        uint256Values[_key] = uint256Values[_key].add(_value);
+    }
+    
+    function subUint256(bytes32 _key, uint256 _value) onlyAllowContractOrOwner {
+        uint256Values[_key] = uint256Values[_key].sub(_value);
+    }  
 
     function setUint256(bytes32 _key, uint256 _value) onlyAllowContractOrOwner {
         uint256Values[_key] = _value;
@@ -95,5 +102,6 @@ contract TicketDB is ContractAllowable {
     // solidityの制約でデータ取得が困難なな場合があるので一旦DBから直接読むようにしておく
     // metoropolisアップデートで解消されると思われるので、解消したらticketDBに移す
 }
+
 
 
