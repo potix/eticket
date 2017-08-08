@@ -48,6 +48,7 @@ contract Ticket is TicketInterface, Token {
         TicketDB(ticketDB).setString(sha3("users", _userId, "name"), _name);
         TicketDB(ticketDB).setString(sha3("users", _userId, "email"), _email);
         TicketDB(ticketDB).setString(sha3("users", _userId, "profile"), _profile);
+        TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "version"));
     }
 
     function createUser(
@@ -55,6 +56,7 @@ contract Ticket is TicketInterface, Token {
         string _email,
         string _profile
         ) returns (uint256) {
+        require(msg.sender != 0x0);
         var _userId = TicketDB(ticketDB).getAndIncrementId(sha3("userId"));
         TicketDB(ticketDB).setAddress(sha3("users", _userId, "address"), msg.sender);
         createAndModifyUserCommon(_userId, _name, _email, _profile);
@@ -79,12 +81,17 @@ contract Ticket is TicketInterface, Token {
     // users <userId> events <eventId> country [ISO_3166-1 alpha-2 or alpha-3]
     // users <userId> events <eventId> tags
     // users <userId> events <eventId> description
-    // users <userId> events <eventId> maxPrice
-    // users <userId> events <eventId> memorialUrlOfReserved
+    // users <userId> events <eventId> memorialOracleUrlOfReserved
     // users <userId> events <eventId> memorialOracleUrlOfEntered
-    // users <userId> events <eventId> cacheBackOracleUrl
-    // users <userId> events <eventId> state [ 0x01 CREATED, 0x02 OPENED, 0x04 STOPPED, 0x08 CLOSED, 0x10 COLLECTED ]
-    
+    // users <userId> events <eventId> cashBackOracleUrl
+    // users <userId> events <eventId> amountSold
+    // users <userId> events <eventId> state [ 0x01 CREATED, 0x02 PREPARE, 0x04 OPENED, 0x08 STARTED,  0x10 STOPPED, 0x20 CLOSED, 0x40 COLLECTED ]
+
+    // [event reference]
+    // eventRefId
+    // eventRefs <eventrefId> eventOwner(userId)
+    // eventRefs <eventrefId> eventId
+
     uint32 constant EVST_CREATED   = 0x01;
     uint32 constant EVST_OPENED    = 0x02;
     uint32 constant EVST_STOPPED   = 0x04;
@@ -103,10 +110,9 @@ contract Ticket is TicketInterface, Token {
         string _country, 
         string _tags, 
         string _description, 
-        uint32 _maxPrice, 
-        string _memorialUrlOfReserved, 
-        string _memorialOracleUrlOfEntered, 
-        string _cacheBackOracleUrl
+        string _reserveOracleUrl, 
+        string _entereOracleUrl, 
+        string _cashBackOracleUrl
         ) returns (uint256) {
         var b = bytes(_name);
         require(b.length > 0 && b.length <= 200);
@@ -126,10 +132,10 @@ contract Ticket is TicketInterface, Token {
         TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "country"), _country);
         TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "tags"), _tags);
         TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "description"), _description);
-        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "maxPrice"), _maxPrice);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "memorialUrlOfReserved"), _memorialUrlOfReserved);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "memorialOracleUrlOfEntered"), _memorialOracleUrlOfEntered);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "cacheBackOracleUrl"), _cacheBackOracleUrl);
+        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "reserveOracleUrl"), _memorialUrlOfReserved);
+        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "entereOracleUrl"), _memorialOracleUrlOfEntered);
+        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "cashBackOracleUrl"), _cashBackOracleUrl);
+        TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "version"));
         return _eventId;
     }
     
@@ -138,10 +144,9 @@ contract Ticket is TicketInterface, Token {
         string _country, 
         string _tags, 
         string _description, 
-        uint32 _maxPrice, 
-        string _memorialUrlOfReserved, 
-        string _memorialOracleUrlOfEntered, 
-        string _cacheBackOracleUrl
+        string _reserveOracleUrl, 
+        string _entereOracleUrl, 
+        string _cashBackOracleUrl
         ) returns (uint256) {
         var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
         require(isOwnerUser(_userId));
@@ -153,11 +158,14 @@ contract Ticket is TicketInterface, Token {
             _country, 
             _tags, 
             _description, 
-            _maxPrice, 
-            _memorialUrlOfReserved, 
-            _memorialOracleUrlOfEntered, 
-            _cacheBackOracleUrl);
+            _reserveOracleUrl, 
+            _entereOracleUrl, 
+            _cashBackOracleUrl);
+        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "amountSold"), 0);
         TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "state"), EVST_OPENED);
+        var _eventRefId = TicketDB(ticketDB).getAndIncrementId(sha3("eventRegId"));
+        TicketDB(ticketDB).setUint256(sha3("eventRefs", _eventRefId, "userId"), _userId);
+        TicketDB(ticketDB).setUint256(sha3("eventRefs", _eventRefId, "eventId"), _eventId);
         return _eventId;
     }
 
@@ -167,10 +175,9 @@ contract Ticket is TicketInterface, Token {
         string _country, 
         string _tags, 
         string _description, 
-        uint32 _maxPrice, 
-        string _memorialUrlOfReserved, 
-        string _memorialOracleUrlOfEntered, 
-        string _cacheBackOracleUrl
+        string _reserveOracleUrl, 
+        string _entereOracleUrl, 
+        string _cashBackOracleUrl
         ) returns (bool) {
         var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
         require(isOwnerUser(_userId));
@@ -182,26 +189,168 @@ contract Ticket is TicketInterface, Token {
             _country, 
             _tags, 
             _description, 
-            _maxPrice, 
-            _memorialUrlOfReserved, 
-            _memorialOracleUrlOfEntered, 
-            _cacheBackOracleUrl);
+            _reserveOracleUrl, 
+            _entereOracleUrl, 
+            _cashBackOracleUrl);
         return true;
     }
 
+    function openEvent(uint256 _eventId) {
+        // チケットを発行したらPREPAREになっている
+        // PREPAREまたはstart状態の場合
+        // OPEN状態ににする
+        // reserveがenter,cashbackできるようになる
+    }
+
+    function startEvent(uint256 _eventId) {
+        // open状態のときまたはcloseのときのみ
+        // イベント開始が確定したら
+        // 何日か前ぐらいにはスタートしておく (買い占めの嫌がらせが考えられるので余裕を持ってスタートしておくのがいい)
+        // cancelができなくなる
+    }
+
+    function stopEvent(uint256 _eventId) {
+        // openもしくはstartの場合
+        // イベントを中止せざるをえなくなったとき
+        // すべての購入者へトークンの返却 これは買った人に返す。cashbackされてりいる場合その額は返却トークンから引かれる
+        // これ以降の状態変更は無理
+    }
+
+    function closeEvent(uint256 _eventId) { // イベントを閉じる 
+        // start状態の場合のみ可能
+        // reservedとかenterとかcashbackとかとかできなくなる
+        // close状態にする
+    }
+
+   function collectAmountSold(uint256 _eventId) { // ここではじめてプールからトークンが回収される
+        // closeしてたらできる
+        // 購入した人のトークンが回収される
+        // これをやるまではプールにあるだけ
+        // collected状態にする
+        // これ以降の状態変更は無理
+    }
+
     // [ticketGroup]
-    // users <userId> events <eventId> totalSupplyTickets
-    // users <userId> events <eventId> SoldTickets
-    // users <userId> events <eventId> buyUsers <userId> buyTickets 
+    // userId <userId> eventId <eventId> ticketGroupId
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> description
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> supplyTickets
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> soldTickets
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> maxPrice
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> price
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> admountSold
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> lastSerialNumber
 
 
+    function createTicketGroup(uint256 _eventId) {
+        // チケットグループを作る
+        // グループはVIP席とか一般席みたいなおおむねそういうのを表現したもの
+        
+    }
+
+    function changeMAxPriceTicketGroup(uint256 _eventId, uint256 ticketGroupId) {
+        // チケットグループのMAX料金を変更する
+    }
+
+    function changePriceTicketGroup(uint256 _eventId, uint256 ticketGroupId) {
+        // チケットグループの料金を変更する
+    }
+
+    function addTicket(uint256 _eventId, uint256 ticketGroupId) {
+        // チケットグループのチケット供給量を増やす
+    }
+
+    function subTicket(uint256 _eventId, uint256 ticketGroupId) {
+        // チケットグループのチケット供給量を減らす
+    }
 
 
+    // [ticketBuyer]
+    // userId <userId> eventId <eventId> ticketGroupId <ticketGroupId> buyerId
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyer(userId)
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyTickets
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> reservedTickets
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyPrioce
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> totalCashBackPrice
 
+    // [userBuyTicket]
+    // userId <userId> buyTicketId
+    // users <userId> buyTickets >buyTicketId> eventOwner(userId)
+    // users <userId> buyTickets >buyTicketId> eventId
+    // users <userId> buyTickets >buyTicketId> ticketGroupId
+    // users <userId> buyTickets >buyTicketId> buyerId
 
-
-
+    function buyTicket(_userid, groupid) {
+        // ちけっとを購入する 
+        // groupIdと数量をしていしてまとめて買える
+        // 買うごとにbyerIdは新たに発行される
+    }
     
+    function cancelTicket(_userid, groupid, ticketGroupId, buyerid, amounty) {
+        // ちけっとをキャンセルする
+        // すうまいだけのキャンセルも可能
+    }
+
+    // [ticketContext]
+    // users <userId> events <eventId> ticketCtxId
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> eventOwner(userId)
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> eventId
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> ticketGroupId
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> buyer(userId)
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> prevTicketOwner(userId)
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> ticketOwner(userId)
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> reservedUrl
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> EnteredUrl
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> cashBackPrice
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> enterCode
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> serialNumber
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> BuyPrice
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> salePrice
+    // users <userId> events <eventId> ticketCtxs <ticketCtxId> state [ 0x10 SALABLE, 0x01 RESERVED, 0x02 ENTERD ]
+
+    // [userTicketCtx]
+    // userId <userId> reservedTicketCtxId
+    // users <userId> reservedTicketCtxs >reservedTicketCtxId> eventOwner(userId) 
+    // users <userId> reservedTicketCtxs >reservedTicketCtxId> eventId
+    // users <userId> reservedTicketCtxs >reservedTicketCtxId> ticketCtxId
+
+    function reserveTicket(uint amount) { // まとめてreserveできる
+        // 参加予約する
+        // reserveするとキャンセルはできなくなる
+        // cashbackのアクティベートができるようになる(cachbackのアクティベートしたら他人に売れなくなる)
+        // 量をまとめてしていするとシリアル番号は必ず並ぶ
+        // oraclizeでreverve記念URLを発行する、そのURLにアクセスすると素敵なことがあるようにできる
+    }
+
+    function transferTicketCtx() { 
+        //　チケットコンテキストの所有者変更、無料で他人にゆずる。男前
+    }
+
+    function enableSaleTicketCtx(uint32 price) { 
+        //　チケットコンテキストをSALABLE状態にする
+        // cachebackしてたらsalableの変更はできない
+        // 値段は　eventOwnerが設定したmaxPriceを超えられない。残念だったな。
+    }
+
+    function disableSaleTicketCtx() { //　チケットコンテキストをSALABLE状態じゃなくす
+        // cachebackしてたらsalableの変更はできない
+    }
+
+    function buyTicketCtx() { 
+        //　チケットコンテキストがSALABLEの場合にチケットを買うことができる
+        // end to end で買うとということ
+        // だれかに購入に必要な情報を教えてもらわないと、検索して探すのはほぼ無理
+    }
+
+    function activateCacheBack() {
+        // キャッシュバックコードをoraclizeでなげるとcachebackされる
+        // cashbackを受けるともう他人へ売却することはできなくなる、譲渡はできる
+    }
+    
+    function enterTicketCtx() { // 入場記念処置イベンターがやる
+        // oraclizeでr入場記念URLを発行する、そのURLにアクセスすると素敵なことがあるようにできる
+    }
+    
+
 }
 
 
