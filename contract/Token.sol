@@ -1,359 +1,206 @@
 pragma solidity ^0.4.14;
 
-import "./TicketInterface.sol";
-import "./Token.sol";
-import "./State.sol";
-import "./TicketDB.sol";
+import "./TokenInterface.sol";
+import "./ContractAllowable.sol";
+import "./TokenDB.sol";
+import "./Converter.sol";
 
-contract Ticket is TicketInterface, Token {
-    using State for uint32;  
-    
-    address ticketDB;
-    
-    function Ticket(address _tokenDB, address _ticketDB) Token(_tokenDB) {
-        require(_ticketDB != 0x0);
-        ticketDB = _ticketDB;
+contract Token is ERC20Interface, TokenInterface, ContractAllowable {
+    address public tokenDB;
+
+    function Token(address _tokenDB) {
+        require(_tokenDB != 0x0);
+        tokenDB = _tokenDB;
     }
-
-    function removeTicketDB() onlyOwner returns (bool) {
-        ticketDB = address(0);
+    
+    function removeTokenDB() onlyOwner returns (bool) {
+        tokenDB = address(0);
         return true;
     }
 
-    // [user] 
-    // userId
-    // users <userId> "address"
-    // users <userId> "name"
-    // users <userId> "email"
-    // users <userId> profile
-    // idMap <address> <userId>
-
-    function isOwnerUser(uint256 _userId) returns (bool) {
-        var _address = TicketDB(ticketDB).getAddress(sha3("users", _userId, "address"));
-        return (msg.sender == _address);
+    /**
+     * @dev Get name
+     * @return The name.
+     */
+    function name() constant returns (string) {
+        return Converter.bytes32ToString(TokenDB(tokenDB).getName());    
     }
 
-    function createAndModifyUserCommon(
-        uint256 _userId,
-        string _name, 
-        string _email, 
-        string _profile
-    ) {
-        var b = bytes(_name);
-        require(b.length > 0 && b.length <= 100);
-        b = bytes(_email);
-        require(b.length <= 100);
-        b = bytes(_profile);
-        require(b.length <= 1000);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "name"), _name);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "email"), _email);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "profile"), _profile);
-        TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "version"));
-    }
-
-    function createUser(
-        string _name, 
-        string _email,
-        string _profile
-        ) returns (uint256) {
-        require(msg.sender != 0x0);
-        var _userId = TicketDB(ticketDB).getAndIncrementId(sha3("userId"));
-        TicketDB(ticketDB).setAddress(sha3("users", _userId, "address"), msg.sender);
-        createAndModifyUserCommon(_userId, _name, _email, _profile);
-        TicketDB(ticketDB).setIdMap(msg.sender, _userId);
-        return _userId;
-    }
-
-    function modifyUser(
-        string _name, 
-        string _email, 
-        string _profile
-        ) returns (bool) {
-        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
-        require(isOwnerUser(_userId));
-        createAndModifyUserCommon(_userId, _name, _email, _profile);
+    /**
+     * @dev Set name
+     * @param _name The name.
+     */
+    function setName(string _name) onlyOwner returns (bool) {
+        TokenDB(tokenDB).setName(Converter.stringToBytes32(_name));
         return true;
     }
 
-    // [event] 
-    // userId <userId> eventId
-    // users <userId> events <eventId> name
-    // users <userId> events <eventId> country [ISO_3166-1 alpha-2 or alpha-3]
-    // users <userId> events <eventId> tags
-    // users <userId> events <eventId> description
-    // users <userId> events <eventId> memorialOracleUrlOfReserved
-    // users <userId> events <eventId> memorialOracleUrlOfEntered
-    // users <userId> events <eventId> cashBackOracleUrl
-    // users <userId> events <eventId> amountSold
-    // users <userId> events <eventId> state [ 0x01 CREATED, 0x02 SALED, 0x04 OPENED, 0x08 SURENESS,  0x10 STOPPED, 0x20 CLOSED, 0x40 COLLECTED ]
-
-    // [event reference]
-    // eventRefId
-    // eventRefs <eventrefId> eventOwner(userId)
-    // eventRefs <eventrefId> eventId
-
-    uint32 constant EVST_CREATED   = 0x01;
-    uint32 constant EVST_OPENED    = 0x02;
-    uint32 constant EVST_STOPPED   = 0x04;
-    uint32 constant EVST_CLOSED    = 0x08;
-    uint32 constant EVST_COLLECTED = 0x10;
-
-    function isEventExists(uint256 _userId, uint256 _eventId) returns (bool) {
-        var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
-        return (_state != 0);
+    /**
+     * @dev Get symbol
+     * @return The symbol.
+     */
+    function symbol() constant returns (string) {
+        return Converter.bytes32ToString(TokenDB(tokenDB).getSymbol());    
     }
 
-    function createAndModifyEventCommon(
-        uint256 _userId,
-        uint256 _eventId,
-        string _name, 
-        string _country, 
-        string _tags, 
-        string _description, 
-        string _reserveOracleUrl, 
-        string _entereOracleUrl, 
-        string _cashBackOracleUrl
-        ) returns (uint256) {
-        var b = bytes(_name);
-        require(b.length > 0 && b.length <= 200);
-        b = bytes(_country);
-        require(b.length > 0 && b.length <= 3);
-        b = bytes(_tags);
-        require(b.length <= 1000);
-        b = bytes(_description);
-        require(b.length <= 10000);
-        b = bytes(_memorialUrlOfReserved);
-        require(b.length <= 2000);
-        b = bytes(_memorialOracleUrlOfEntered);
-        require(b.length <= 2000);
-        b = bytes(_cacheBackOracleUrl);
-        require(b.length <= 2000);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "name"), _name);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "country"), _country);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "tags"), _tags);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "description"), _description);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "reserveOracleUrl"), _memorialUrlOfReserved);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "entereOracleUrl"), _memorialOracleUrlOfEntered);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "cashBackOracleUrl"), _cashBackOracleUrl);
-        TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "version"));
-        return _eventId;
-    }
-    
-    function createEvent(
-        string _name, 
-        string _country, 
-        string _tags, 
-        string _description, 
-        string _reserveOracleUrl, 
-        string _entereOracleUrl, 
-        string _cashBackOracleUrl
-        ) returns (uint256) {
-        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
-        require(isOwnerUser(_userId));
-        var _eventId = TicketDB(ticketDB).getAndIncrementId(sha3("userId", _userId, "eventId"));
-        createAndModifyEventCommon(
-            _userId,
-            _eventId,
-            _name, 
-            _country, 
-            _tags, 
-            _description, 
-            _reserveOracleUrl, 
-            _entereOracleUrl, 
-            _cashBackOracleUrl);
-        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "amountSold"), 0);
-        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "state"), EVST_OPENED);
-        var _eventRefId = TicketDB(ticketDB).getAndIncrementId(sha3("eventRegId"));
-        TicketDB(ticketDB).setUint256(sha3("eventRefs", _eventRefId, "userId"), _userId);
-        TicketDB(ticketDB).setUint256(sha3("eventRefs", _eventRefId, "eventId"), _eventId);
-        return _eventId;
-    }
-
-    function modifyEvent(
-        uint256 _eventId,
-        string _name, 
-        string _country, 
-        string _tags, 
-        string _description, 
-        string _reserveOracleUrl, 
-        string _entereOracleUrl, 
-        string _cashBackOracleUrl
-        ) returns (bool) {
-        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
-        require(isOwnerUser(_userId));
-        require(isEventExists(_userId, _eventId));
-        createAndModifyEventCommon(
-            _userId,
-            _eventId,
-            _name, 
-            _country, 
-            _tags, 
-            _description, 
-            _reserveOracleUrl, 
-            _entereOracleUrl, 
-            _cashBackOracleUrl);
+    /**
+     * @dev Set symbol
+     * @param _symbol The symbol.
+     */
+    function setSymbol(string _symbol) onlyOwner returns (bool) {
+        TokenDB(tokenDB).setSymbol(Converter.stringToBytes32(_symbol));
         return true;
     }
 
-    function openEvent(uint256 _eventId) {
-        // チケットを発行したらSALEDになっている
-        // SALEDまたはstart状態の場合
-        // OPEN状態ににする
-        // reserveがenter,cashbackできるようになる
+    /**
+     * @dev Get decimals
+     * @return The decimals.
+     */
+    function decimals() constant returns (uint) {
+        return TokenDB(tokenDB).getDecimals();    
     }
 
-    function surenessEvent(uint256 _eventId) {
-        // open状態のときまたはcloseのときのみ
-        // イベント開始が確定したら
-        // 何日か前ぐらいにはスタートしておく (買い占めの嫌がらせが考えられるので余裕を持ってスタートしておくのがいい)
-        // cancelができなくなる
+    /**
+     * @dev Set decimals
+     * @param _decimals The decimals.
+     */
+    function setDecimals(uint _decimals) onlyOwner returns (bool) {
+        TokenDB(tokenDB).setDecimals(_decimals);
+        return true;
     }
 
-    function stopEvent(uint256 _eventId) {
-        // openもしくはSURENESSの場合
-        // イベントを中止せざるをえなくなったとき
-        // すべての購入者へトークンの返却 これは買った人に返す。cashbackされてりいる場合その額は返却トークンから引かれる
-        // しかしこれは、たくさんループするから危険。申告制にするべきか。。。。
-        // これ以降の状態変更は無理
+    /**
+     * @dev Get total supply
+     * @return The total supply.
+     */
+    function totalSupply() constant returns (uint256) {
+        return TokenDB(tokenDB).getTotalSupply();    
     }
 
-    function closeEvent(uint256 _eventId) { // イベントを閉じる 
-        // SURENESS状態の場合のみ可能
-        // reservedとかenterとかcashbackとかとかできなくなる
-        // close状態にする
+    /**
+     * @dev Increase total supply
+     * @param _amount The additinal supply amount.
+     */
+    function increaseSupply(uint256 _amount) onlyOwner returns  (bool) {
+        TokenDB(tokenDB).addTotalSupply(_amount);
+        TokenDB(tokenDB).addBalance(msg.sender, _amount);
+        return true;
     }
 
-   function collectAmountSold(uint256 _eventId) { // ここではじめてプールからトークンが回収される
-        // closeしてたらできる
-        // 購入した人のトークンが回収される
-        // これをやるまではプールにあるだけ
-        // collected状態にする
-        // これ以降の状態変更は無理
+    /**
+     * @dev decrease total supply
+     * @param _amount The subtractional supply amount.
+     */
+    function decreaseSupply(uint256 _amount) onlyOwner returns  (bool) {
+        TokenDB(tokenDB).subTotalSupply(_amount);
+        TokenDB(tokenDB).subBalance(msg.sender, _amount);
+        return true;
     }
 
-    // [ticketGroup]
-    // userId <userId> eventId <eventId> ticketGroupId
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> description
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> supplyTickets
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> soldTickets
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> maxPrice
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> price
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> admountSold
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> lastSerialNumber
-
-
-    function createTicketGroup(uint256 _eventId) {
-        // チケットグループを作る
-        // グループはVIP席とか一般席みたいなおおむねそういうのを表現したもの
-        
-    }
-
-    function changeMAxPriceTicketGroup(uint256 _eventId, uint256 ticketGroupId) {
-        // チケットグループのMAX料金を変更する
-    }
-
-    function changePriceTicketGroup(uint256 _eventId, uint256 ticketGroupId) {
-        // チケットグループの料金を変更する
-    }
-
-    function addTicket(uint256 _eventId, uint256 ticketGroupId) {
-        // チケットグループのチケット供給量を増やす
-    }
-
-    function subTicket(uint256 _eventId, uint256 ticketGroupId) {
-        // チケットグループのチケット供給量を減らす
-    }
-
-    // [ticketBuyer]
-    // userId <userId> eventId <eventId> ticketGroupId <ticketGroupId> buyerId
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyer(userId)
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyTickets
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> reservedTickets
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> payPool
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyPrioce
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> totalCashBackPrice
-
-    // [userBuyTicket]
-    // userId <userId> buyTicketId
-    // users <userId> buyTickets >buyTicketId> eventOwner(userId)
-    // users <userId> buyTickets >buyTicketId> eventId
-    // users <userId> buyTickets >buyTicketId> ticketGroupId
-    // users <userId> buyTickets >buyTicketId> buyerId
-
-    function buyTicket(_userid, groupid) {
-        // ちけっとを購入する 
-        // groupIdと数量をしていしてまとめて買える
-        // 買うごとにbyerIdは新たに発行される
+    /**
+     * @dev transfer token for a specified address
+     * @param _to The address to transfer to.
+     * @param _value The amount to be transferred.
+     */
+    function transfer(address _to, uint256 _value) returns (bool) {
+        require(_to != address(0));
+        TokenDB(tokenDB).subBalance(msg.sender, _value);
+        TokenDB(tokenDB).addBalance(_to, _value);
+        Transfer(msg.sender, _to, _value);
+        return true;
     }
     
-    function cancelTicket(_userid, groupid, ticketGroupId, buyerid, amounty) {
-        // ちけっとをキャンセルする
-        // すうまいだけのキャンセルも可能
-    }
-
-    // [ticketContext]
-    // users <userId> events <eventId> ticketCtxId
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> eventOwner(userId)
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> eventId
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> ticketGroupId
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> buyer(userId)
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> prevTicketOwner(userId)
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> ticketOwner(userId)
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> reservedUrl
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> EnteredUrl
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> cashBackPrice
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> enterCode
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> serialNumber
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> BuyPrice
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> salePrice
-    // users <userId> events <eventId> ticketCtxs <ticketCtxId> state [ 0x10 SALABLE, 0x01 RESERVED, 0x02 ENTERD ]
-
-    // [userTicketCtx]
-    // userId <userId> reservedTicketCtxId
-    // users <userId> reservedTicketCtxs >reservedTicketCtxId> eventOwner(userId) 
-    // users <userId> reservedTicketCtxs >reservedTicketCtxId> eventId
-    // users <userId> reservedTicketCtxs >reservedTicketCtxId> ticketCtxId
-
-    function reserveTicket(uint amount) { // まとめてreserveできる
-        // 参加予約する
-        // reserveするとキャンセルはできなくなる
-        // cashbackのアクティベートができるようになる(cachbackのアクティベートしたら他人に売れなくなる)
-        // 量をまとめてしていするとシリアル番号は必ず並ぶ
-        // oraclizeでreverve記念URLを発行する、そのURLにアクセスすると素敵なことがあるようにできる
-    }
-
-    function transferTicketCtx() { 
-        //　チケットコンテキストの所有者変更、無料で他人にゆずる。男前
-    }
-
-    function enableSaleTicketCtx(uint32 price) { 
-        //　チケットコンテキストをSALABLE状態にする
-        // cachebackしてたらsalableの変更はできない
-        // 値段は　eventOwnerが設定したmaxPriceを超えられない。残念だったな。
-    }
-
-    function disableSaleTicketCtx() { //　チケットコンテキストをSALABLE状態じゃなくす
-        // cachebackしてたらsalableの変更はできない
-    }
-
-    function buyTicketCtx() { 
-        //　チケットコンテキストがSALABLEの場合にチケットを買うことができる
-        // end to end で買うとということ
-        // だれかに購入に必要な情報を教えてもらわないと、検索して探すのはほぼ無理
-    }
-
-    function activateCacheBack() {
-        // キャッシュバックコードをoraclizeでなげるとcachebackされる
-        // cashbackを受けるともう他人へ売却することはできなくなる、譲渡はできる
+    /**
+     * @dev Gets the balance of the specified address.
+     * @param _owner The address to query the the balance of. 
+     * @return An uint256 representing the amount owned by the passed address.
+     */   
+    function balanceOf(address _owner) constant returns (uint256) {
+        return TokenDB(tokenDB).getBalance(_owner);   
     }
     
-    function enterTicketCtx() { // 入場記念処置イベンターがやる
-        // oraclizeでr入場記念URLを発行する、そのURLにアクセスすると素敵なことがあるようにできる
+    /**
+     * @dev Transfer tokens from one address to another
+     * @param _from address The address which you want to send tokens from
+     * @param _to address The address which you want to transfer to
+     * @param _value uint256 the amout of tokens to be transfered
+     */    
+    function transferFrom(address _from, address _to, uint256 _value) returns (bool) {
+        require(_from != address(0) && _to != address(0));
+        TokenDB(tokenDB).addBalance(_to, _value);
+        TokenDB(tokenDB).subBalance(_from, _value);
+        TokenDB(tokenDB).subAllowance(_from, msg.sender, _value);
+        Transfer(_from, _to, _value);
+        return true;
+    }
+ 
+    /**
+    * @dev Aprove the passed address to spend the specified amount of tokens on behalf of msg.sender.
+    * @param _spender The address which will spend the funds.
+    * @param _value The amount of tokens to be spent.
+    */    
+    function approve(address _spender, uint256 _value) returns (bool) {
+        // To change the approve amount you first have to reduce the addresses`
+        //  allowance to zero by calling `approve(_spender, 0)` if it is not
+        //  already 0 to mitigate the race condition described here:
+        //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+        require((_value == 0) || (TokenDB(tokenDB).getAllowance(msg.sender, _spender) == 0));
+        TokenDB(tokenDB).setAllowance(msg.sender, _spender, _value);
+        Approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    /**
+     * @dev Function to check the amount of tokens that an owner allowed to a spender.
+     * @param _owner address The address which owns the funds.
+     * @param _spender address The address which will spend the funds.
+     * @return A uint256 specifing the amount of tokens still available for the spender.
+     */    
+    function allowance(address _owner, address _spender) constant returns (uint256) {
+        return TokenDB(tokenDB).getAllowance(_owner, _spender);
     }
     
+    /**
+     * @dev Get minting
+     * @return The minting.
+     */
+    function minting() constant returns (bool) {
+        return TokenDB(tokenDB).getMinting();
+    }
+    
+    /**
+     * @dev Function to mint tokens
+     * @param _to The address that will recieve the minted tokens.
+     * @param _amount The amount of tokens to mint.
+     * @return A boolean that indicates if the operation was successful.
+     */
+    function mint(address _to, uint256 _amount) onlyAllowContractOrOwner returns (bool) {
+        require(TokenDB(tokenDB).getMinting());
+        TokenDB(tokenDB).addTotalSupply(_amount);
+        TokenDB(tokenDB).addBalance(_to, _amount);
+        Mint(_to, _amount);
+        return true;
+    }
 
+    /**
+     * @dev Function to enable minting new tokens.
+     * @return True if the operation was successful.
+     */
+    function enableMinting() onlyOwner returns (bool) {
+        TokenDB(tokenDB).enableMinting();
+        EnableMinting();
+        return true;
+    }
+
+    /**
+     * @dev Function to disable minting new tokens.
+     * @return True if the operation was successful.
+     */
+    function disableMinting() onlyAllowContractOrOwner returns (bool) {
+        TokenDB(tokenDB).disableMinting();
+        DisableMinting();
+        return true;
+    }
 }
-
-
 
 
