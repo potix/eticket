@@ -53,6 +53,11 @@ contract Crowdsale is Ownable {
         mintableToken = address(0);
         return true;
     }
+    
+    function changeMintableToken(address _mintableToken) onlyOwner returns (bool) {
+        mintableToken = _mintableToken;
+        return true;
+    }
 
     // fallback function can be used to buy tokens
     function () payable {
@@ -89,4 +94,5 @@ contract Crowdsale is Ownable {
         return block.number > endBlock;
     }
 }
+
 
