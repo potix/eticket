@@ -7,6 +7,7 @@ import "./TicketDB.sol";
 
 contract Ticket is TicketInterface, Token {
     using State for uint32;  
+    using SafeMath for uint256;   
     
     address ticketDB;
     
@@ -21,9 +22,6 @@ contract Ticket is TicketInterface, Token {
     }
 
     // utility function
-    
-    uint256 constant UINT32_MAX = 0xffffffff; 
-
     function validStringLength(string _value, uint min, uint max) private {
         var b = bytes(_value);
         require(b.length >= min && b.length <= max);
@@ -41,6 +39,11 @@ contract Ticket is TicketInterface, Token {
     // users <userId> profile
     // users <userId> version
     // idMap <address> <userId>
+    
+    function userExists(uint256 _userId) private {
+        var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "state"));
+        require(_state != 0);
+    }
 
     function onlyOwnerUser(uint256 _userId) private {
         var _address = TicketDB(ticketDB).getAddress(sha3("users", _userId, "address"));
@@ -89,7 +92,7 @@ contract Ticket is TicketInterface, Token {
         return true;
     }
 
-
+    // == create/modify ==
     // [event] 
     // userId <userId> eventId
     // users <userId> events <eventId> name
@@ -102,7 +105,6 @@ contract Ticket is TicketInterface, Token {
     // users <userId> events <eventId> amountSold
     // users <userId> events <eventId> state [ 0x01 CREATE, 0x02 SALE, 0x04 OPEN, 0x08 READY,  0x10 STOP, 0x20 CLOSE, 0x40 COLLECT ]
     // users <userId> events <eventId> version
-
     // [event reference]
     // eventRefId
     // eventRefs <eventrefId> eventOwner(userId)
@@ -242,7 +244,7 @@ contract Ticket is TicketInterface, Token {
         eventExists(_userId, _eventId);
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
-        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "state"), _state.changeState((EVST_OPEN|EVST_CLOSE), EVST_READY));
+        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "state"), _state.changeState((EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY), EVST_STOP));
         TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "version"));
         return true;
         // イベントを中止せざるをえなくなったとき
@@ -284,6 +286,7 @@ contract Ticket is TicketInterface, Token {
         // これ以降の状態変更はない
     }
 
+    // == create/modify ==
     // [ticketGroup]
     // userId <userId> eventId <eventId> ticketGroupId
     // users <userId> events <eventId> ticketGroups <ticketGroupId> name
@@ -292,27 +295,28 @@ contract Ticket is TicketInterface, Token {
     // users <userId> events <eventId> ticketGroups <ticketGroupId> soldTickets
     // users <userId> events <eventId> ticketGroups <ticketGroupId> maxPrice
     // users <userId> events <eventId> ticketGroups <ticketGroupId> price
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> admountSold
     // users <userId> events <eventId> ticketGroups <ticketGroupId> lastSerialNumber
-    // users <userId> events <eventId> ticketGroups <ticketGroupId> state [ 0x01 SALE 0x02 STOP ]
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> state [ 0x01 SALE_START 0x02 STOP_STOP ]
     // users <userId> events <eventId> ticketGroups <ticketGroupId> version
-    
-    uint32 constant TGST_SALE = 0x01;
-    uint32 constant TGST_STOP = 0x02;
+    // == related ==
+    // users <userId> events <eventId> state [ 0x01 CREATE, 0x02 SALE, 0x04 OPEN, 0x08 READY,  0x10 STOP, 0x20 CLOSE, 0x40 COLLECT ]
+
+    uint32 constant TGST_SALE_START = 0x01;
+    uint32 constant TGST_SALE_STOP  = 0x02;
 
     function ticketGroupExists(uint256 _userId, uint256 _eventId, uint256 _ticketGroupId) private {
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"));
         require(_state != 0);
     }
-
-    function createTicketGroup(
+    
+    function createTicketGroupCommon(
+        uint256 _userId,
         uint256 _eventId, 
         string _name, 
         string _description,
-        uint32 _supplyTickets,
-        uint32 _maxPrice,
-        uint32 _price) returns (uint256) {
-        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
+        uint256 _supplyTickets,
+        uint256 _maxPrice,
+        uint256 _price) returns (uint256) {
         onlyOwnerUser(_userId);
         eventExists(_userId, _eventId);
         var _ticketGroupId = TicketDB(ticketDB).getAndIncrementId(sha3("userId", _userId, "eventId", _eventId, "ticketGroupId"));
@@ -320,9 +324,6 @@ contract Ticket is TicketInterface, Token {
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
         validStringLength(_name, 1, 100);        
         validStringLength(_description, 1, 3000);
-        validUint256Range(_supplyTickets, 0, UINT32_MAX);        
-        validUint256Range(_maxPrice, 0, UINT32_MAX);        
-        validUint256Range(_price, 0, UINT32_MAX);        
         require(_maxPrice >= _price);
         TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "name"), _name);
         TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "description"), _description);
@@ -330,13 +331,37 @@ contract Ticket is TicketInterface, Token {
         TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "maxPrice"), _maxPrice);
         TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "price"), _price);
         TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "soldTickets"), 0);
-        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "amountSold"), 0);
         TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "lastSerialNumber"), 0);
-        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"), TGST_SALE);
         TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
         return _ticketGroupId;
     }
 
+    function createTicketGroupWithSale(
+        uint256 _eventId, 
+        string _name, 
+        string _description,
+        uint256 _supplyTickets,
+        uint256 _maxPrice,
+        uint256 _price) returns (uint256) {
+        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
+        var _ticketGroupId = createTicketGroupCommon(_userId, _eventId, _name, _description, _supplyTickets, _maxPrice, _price);
+        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"), TGST_SALE_START);
+        return _ticketGroupId;
+    }
+    
+    function createTicketGroupWithNotSale(
+        uint256 _eventId, 
+        string _name, 
+        string _description,
+        uint256 _supplyTickets,
+        uint256 _maxPrice,
+        uint256 _price) returns (uint256) {
+        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
+        var _ticketGroupId = createTicketGroupCommon(_userId, _eventId, _name, _description, _supplyTickets, _maxPrice, _price);
+        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"), TGST_SALE_STOP);
+        return _ticketGroupId;
+    }
+    
     function setTicketGroupName(uint256 _eventId, uint256 _ticketGroupId, string _name) returns (bool) {
         var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
         onlyOwnerUser(_userId);
@@ -371,9 +396,6 @@ contract Ticket is TicketInterface, Token {
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
         require(_addSupplyTickets > 0);
-        // 発行上限は超えられない    
-        var _supplyTickets = TicketDB(ticketDB).getUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "suplyTickets"));
-        require(UINT32_MAX >= _supplyTickets + _addSupplyTickets);
         TicketDB(ticketDB).addUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "supplyTickets"), _addSupplyTickets);
         TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
         return true;
@@ -387,12 +409,10 @@ contract Ticket is TicketInterface, Token {
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
         require(_subSupplyTickets > 0);
-        // 現在の発行枚数を超えて減らすことはできない。        
+        // すでに売れているチケットを超えて減らすことはできない
         var _supplyTickets = TicketDB(ticketDB).getUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "suplyTickets"));
-        require(_supplyTickets >= _subSupplyTickets);
-        //　すでに売れているチケットを超えて減らすことはできあない
-        var _soldTickets =  TicketDB(ticketDB).getUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "suplyTickets"));
-        require(_supplyTickets - _subSupplyTickets >= _soldTickets);
+        var _soldTickets =  TicketDB(ticketDB).getUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "soldTickets"));
+        require(_supplyTickets.sub(_subSupplyTickets) >= _soldTickets);
         TicketDB(ticketDB).subUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "supplyTickets"), _subSupplyTickets);
         TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
         return true;
@@ -405,7 +425,6 @@ contract Ticket is TicketInterface, Token {
         ticketGroupExists(_userId, _eventId, _ticketGroupId);
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
-        validUint256Range(_maxPrice, 0, UINT32_MAX);        
         // maxPriceをpriceより小さくして設定するとpriceの値がmaxPriceより大きくなることがあるけど許容する
         TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "maxPrice"), _maxPrice);
         TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
@@ -419,7 +438,6 @@ contract Ticket is TicketInterface, Token {
         ticketGroupExists(_userId, _eventId, _ticketGroupId);
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
-        validUint256Range(_price, 0, UINT32_MAX);
         // maxPriceは超えられない
         var _maxPrice = TicketDB(ticketDB).getUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "maxPrice"));
         require(_maxPrice >= _price);
@@ -436,8 +454,8 @@ contract Ticket is TicketInterface, Token {
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
         _state =  TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"));
-        require(_state.equalsState(TGST_SALE));
-        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"), _state.changeState((TGST_SALE), TGST_STOP));
+        require(_state.equalsState(TGST_SALE_START));
+        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"), _state.changeState(TGST_SALE_START, TGST_SALE_STOP));
         TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
         return true;
         // チケットグループを個別に販売停止する
@@ -451,13 +469,14 @@ contract Ticket is TicketInterface, Token {
         var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
         _state =  TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"));
-        require(_state.equalsState(TGST_STOP));
-        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"),  _state.changeState((TGST_STOP), TGST_SALE));
+        require(_state.equalsState(TGST_SALE_STOP));
+        TicketDB(ticketDB).setUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"),  _state.changeState(TGST_SALE_STOP, TGST_SALE_START));
         TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
         return true;
         // チケットグループを個別に販売開始する
     }
 
+    // == create/modify ==
     // [ticketBuyer]
     // userId <userId> eventId <eventId> ticketGroupId <ticketGroupId> buyerId
     // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyer(userId)
@@ -465,24 +484,87 @@ contract Ticket is TicketInterface, Token {
     // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> reservedTickets
     // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> buyPrioce
     // users <userId> events <eventId> ticketGroups <ticketGroupId> buyers <buyerId> totalCashBackPrice
-
     // [userBuyTicket]
     // userId <userId> buyTicketId
     // users <userId> buyTickets >buyTicketId> eventOwner(userId)
     // users <userId> buyTickets >buyTicketId> eventId
     // users <userId> buyTickets >buyTicketId> ticketGroupId
     // users <userId> buyTickets >buyTicketId> buyerId
+    // == related == 
+    // [event]
+    // users <userId> events <eventId> amountSold
+    // users <userId> events <eventId> state [ 0x01 CREATE, 0x02 SALE, 0x04 OPEN, 0x08 READY,  0x10 STOP, 0x20 CLOSE, 0x40 COLLECT ]
+    // [ticket group]
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> supplyTickets
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> soldTickets
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> price
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> admountSold
+    // users <userId> events <eventId> ticketGroups <ticketGroupId> state [ 0x01 SALE 0x02 STOP ] 
 
-    function buyTicket(uint256 _userid, uint256 ticketGroupid) {
-        // ちけっとを購入する 
-        // groupIdと数量をしていしてまとめて買える
-        // 買うごとにbyerIdは新たに発行される
+    function buyTicketValidate(uint256 _eventOwner, uint256 _eventId,  uint256 _ticketGroupId, uint256 _amount) returns (bool, string) {
+        userExists(_eventOwner);
+        eventExists(_eventOwner, _eventId);
+        ticketGroupExists(_eventOwner, _eventId, _ticketGroupId);
+        // イベントのステートチェック
+        var _state = TicketDB(ticketDB).getUint32(sha3("users", _eventOwner, "events", _eventId, "state"));
+        require(_state.includesState(EVST_SALE|EVST_OPEN|EVST_READY));
+        // チケットグループのステータスチェック
+        _state =  TicketDB(ticketDB).getUint32(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "state"));
+        require(_state.equalsState(TGST_SALE_START));
+        // amountが0ではない
+        require(_amount > 0);
+        // 残りチケット枚数を確認
+        var _supplyTickets = TicketDB(ticketDB).getUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "suplyTickets"));
+        var _soldTickets =  TicketDB(ticketDB).getUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "soldTickets"));
+        if (_supplyTickets.sub(_soldTickets) < _amount) {
+            // 売り切れ
+            return (false, "sold out");
+        }   
+        // 買い手の所持金確認
+        var _price = TicketDB(ticketDB).getUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "price"));
+        var _balance = TokenDB(tokenDB).getBalance(msg.sender);
+        var _totalPrice = _price.mul(_amount);
+        if (_balance < _totalPrice) {
+            // 資金不足
+            return (false "no enough funds");
+        }
+        return (true, "");      
     }
+
+    function buyTicket(uint256 _eventOwner, uint256 _eventId,  uint256 _ticketGroupId, uint256 _amount) returns (bool, string) {
+        var (result, message) = buyTicketValidate(_eventOwner, _eventId, _ticketGroupId, _amount);
+        if (!result) {
+            return (result, message)
+        }
+        var _price = TicketDB(ticketDB).getUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "price"));
+        var _totalPrice = _price.mul(_amount);
+        // buyer情報を作る
+        // reservedTicketsとtotalCashBackPriceは必要になってから作る
+        var _buyerId = TicketDB(ticketDB).getAndIncrementId(sha3("userId", _eventOwner, "eventId", _eventId, "ticketGroupId", _ticketGroupId, "buyerId"));        
+        var _buyerUser = TicketDB(ticketDB).getIdMap(msg.sender);
+        TicketDB(ticketDB).setUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "buyers", _buyerId, "buyer"), _buyerUser);
+        TicketDB(ticketDB).setUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "buyers", _buyerId, "buyTickets"), _amount);
+        TicketDB(ticketDB).setUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "buyers", _buyerId, "buyPrioce"), _price);
+        // ユーザが買ったチケットを辿れるようにする
+        var _buyTicketId =  TicketDB(ticketDB).getAndIncrementId(sha3("userId", _buyerUser, "buyTicketId"));
+        TicketDB(ticketDB).setUint256(sha3("users", _buyerUser, "buyTickets", _buyTicketId, "eventOwner"), _eventOwner);
+        TicketDB(ticketDB).setUint256(sha3("users", _buyerUser, "buyTickets", _buyTicketId, "eventId"), _eventId);
+        TicketDB(ticketDB).setUint256(sha3("users", _buyerUser, "buyTickets", _buyTicketId, "ticketGroupId"), _ticketGroupId);
+        TicketDB(ticketDB).setUint256(sha3("users", _buyerUser, "buyTickets", _buyTicketId, "buyerId"), _buyerId);
+        // ticketGroupの情報更新
+        TicketDB(ticketDB).addUint256(sha3("users", _eventOwner, "events", _eventId, "ticketGroups", _ticketGroupId, "soldTickets"), _amount);
+        // eventの情報更新
+        TicketDB(ticketDB).addUint256(sha3("users", _eventOwner, "events", _eventId, "admountSold"), _totalPrice);
+        // ユーザからお金を引く
+        TokenDB(tokenDB).subBalance(msg.sender, _totalPrice);
+    }
+
     
     function cancelTicket(uint256 _userid, uint256 groupid, uint256 ticketGroupId, uint256 buyerid, uint256 amount) {
         // ちけっとをキャンセルする
         // すうまいだけのキャンセルも可能
     }
+
 
     // [ticketContext]
     // users <userId> events <eventId> ticketCtxId
@@ -542,6 +624,7 @@ contract Ticket is TicketInterface, Token {
     
     function enterTicketCtx() { // 入場記念処置イベンターがやる
         // oraclizeでr入場記念URLを発行する、そのURLにアクセスすると素敵なことがあるようにできる
+        //　ゆずったり、売ったりできなくなる
     }
     
 
