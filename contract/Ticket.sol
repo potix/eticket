@@ -559,8 +559,31 @@ contract Ticket is TicketInterface, Token {
         TokenDB(tokenDB).subBalance(msg.sender, _totalPrice);
     }
 
-    
-    function cancelTicket(uint256 _userid, uint256 groupid, uint256 ticketGroupId, uint256 buyerid, uint256 amount) {
+    function cancelTicket(uint256 buyTicketId, uint256 amount) {
+        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
+        onlyOwnerUser(_userId);
+
+        var _eventOwner = TicketDB(ticketDB).getUint256(sha3("users", _userIdr, "buyTickets", _buyTicketId, "eventOwner"));
+        var _eventId = TicketDB(ticketDB).getUint256(sha3("users", _userId, "buyTickets", _buyTicketId, "eventId"));
+        var _ticketGroupId = TicketDB(ticketDB).getUint256(sha3("users", _userId, "buyTickets", _buyTicketId, "ticketGroupId"));
+        var buyerId = TicketDB(ticketDB).getUint256(sha3("users", _userId, "buyTickets", _buyTicketId, "buyerId"));
+
+        // イベントのステートチェック
+        var _state = TicketDB(ticketDB).getUint32(sha3("users", _eventOwner, "events", _eventId, "state"));
+        require(_state.includesState(EVST_SALE|EVST_OPEN|EVST_STOP));
+
+
+        // amountが0ではない
+        require(_amount > 0);
+        
+
+        
+        
+        eventExists(_userId, _eventId);
+        ticketGroupExists(_userId, _eventId, _ticketGroupId);
+
+
+
         // ちけっとをキャンセルする
         // すうまいだけのキャンセルも可能
     }
