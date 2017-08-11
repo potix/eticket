@@ -3,7 +3,7 @@ pragma solidity ^0.4.14;
 import "./ContractAllowable.sol";
 import "./SafeMath.sol";
 
-contract TicketDB is ContractAllowable {
+contract ETicketDB is ContractAllowable {
     using SafeMath for uint256;  
 
     // 発行したidを格納する領域        
@@ -95,13 +95,11 @@ contract TicketDB is ContractAllowable {
         return uint256Values[_key];
     }
 
-
-
-
     // 情報取得系処理
     // solidityの制約でデータ取得が困難なな場合があるので一旦DBから直接読むようにしておく
     // metoropolisアップデートで解消されると思われるので、解消したらticketDBに移す
 }
+
 
 
 
