@@ -47,14 +47,14 @@ library EticketUser {
         string _profile
         ) internal returns (uint256 _userId) {
         require(Validation.validAddress(msg.sender));
+        require(Validation.validStringLength(_name, 1, 100));        
+        require(Validation.validStringLength(_email, 0, 100));        
+        require(Validation.validStringLength(_profile, 0, 1000));        
         _userId = ETicketDB(_db).getAndIncrementId(sha3("userId"));
         ETicketDB(_db).setIdMap(msg.sender, _userId);
         ETicketDB(_db).setAddress(sha3("users", _userId, "address"), msg.sender);
-        require(Validation.validStringLength(_name, 1, 100));        
         ETicketDB(_db).setString(sha3("users", _userId, "name"), _name);
-        require(Validation.validStringLength(_email, 0, 100));        
         ETicketDB(_db).setString(sha3("users", _userId, "email"), _email);
-        require(Validation.validStringLength(_profile, 0, 1000));        
         ETicketDB(_db).setString(sha3("users", _userId, "profile"), _profile);
         ETicketDB(_db).incrementUint256(sha3("users", _userId, "version"));
         return _userId;

@@ -36,13 +36,17 @@ library EticketEvent {
     uint32 constant EVST_CLOSE   = 0x20;
     uint32 constant EVST_COLLECT = 0x40;
 
+    function getEventState(ETicketDB _db, uint256 _eventId) internal returns (uint32) {
+        ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
+    }
+    
     function existsAndOwnerEvent(ETicketDB _db, uint256 _userId, uint256 _eventId) internal returns (bool) {
-        return ((ETicketDB(_db).getUint32(sha3("events", _eventId, "state")) != 0) &&
+        return ((getEventState(_db, _eventId) != 0) &&
             (ETicketDB(_db).getUint256(sha3("events", _eventId, "userId")) == _userId));
     }
 
     function existsEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-        return (ETicketDB(_db).getUint32(sha3("events", _eventId, "state")) != 0);
+        return (getEventState(_db, _eventId) != 0);
     }
     
     function createEventCommon(
@@ -52,13 +56,13 @@ library EticketEvent {
         string _country, 
         string _description
         ) private returns (uint256 _eventId) {
+        require(Validation.validStringLength(_name, 1, 200));        
+        require(Validation.validStringLength(_country, 1, 3));        
+        require(Validation.validStringLength(_description, 0, 15000));  
         _eventId = ETicketDB(_db).getAndIncrementId(sha3("eventId"));
         ETicketDB(_db).setUint256(sha3("events", _eventId, "userId"), _userId);
-        require(Validation.validStringLength(_name, 1, 200));        
         ETicketDB(_db).setString(sha3("events", _eventId, "name"), _name);
-        require(Validation.validStringLength(_country, 1, 3));        
         ETicketDB(_db).setString(sha3("events", _eventId, "country"), _country);
-        require(Validation.validStringLength(_description, 0, 15000));  
         ETicketDB(_db).setString(sha3("events", _eventId, "description"), _description);
         ETicketDB(_db).setUint256(sha3("events", _eventId, "amountSold"), 0);
         ETicketDB(_db).setUint256(sha3("events", _eventId, "readyTimestamp"), 0);
@@ -144,18 +148,18 @@ library EticketEvent {
     function saleEvent(ETicketDB _db, uint256 _eventId)  returns (bool) {
         var _user = EticketUser.getSenderUser(_db);
         require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
+        var _state = getEventState(_db, _eventId);
         require(_state.includesState(EVST_CREATE|EVST_OPEN));
         ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_CREATE|EVST_OPEN), EVST_SALE));
         ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
         return true;
-        // チケットが販売できるようになる
+        // チケットが購入できるようになる
     }
 
     function openEvent(ETicketDB _db, uint256 _eventId)  returns (bool) {
         var _user = EticketUser.getSenderUser(_db);
         require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
+        var _state = getEventState(_db, _eventId);
         require(_state.includesState(EVST_SALE|EVST_READY));
         ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_SALE|EVST_READY), EVST_OPEN));
         ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
@@ -166,9 +170,11 @@ library EticketEvent {
     function readyEvent(ETicketDB _db, uint256 _eventId)  returns (bool) {
         var _user = EticketUser.getSenderUser(_db);
         require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
+        var _state = getEventState(_db, _eventId);
         require(_state.includesState(EVST_OPEN|EVST_CLOSE));
-        ETicketDB(_db).setUint256(sha3("events", _eventId, "readyTimestamp"), now);
+        if (_state.equalsState(EVST_OPEN)) {
+            ETicketDB(_db).setUint256(sha3("events", _eventId, "readyTimestamp"), now);
+        }
         ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_OPEN|EVST_CLOSE), EVST_READY));
         ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
         return true;
@@ -178,7 +184,7 @@ library EticketEvent {
     function stopEvent(ETicketDB _db, uint256 _eventId)  returns (bool) {
         var _user = EticketUser.getSenderUser(_db);
         require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
+        var _state = getEventState(_db, _eventId);
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
         ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY), EVST_STOP));
         ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
@@ -196,7 +202,7 @@ library EticketEvent {
     function closeEvent(ETicketDB _db, uint256 _eventId) returns (bool) { 
         var _user = EticketUser.getSenderUser(_db);
         require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
+        var _state = getEventState(_db, _eventId);
         require(_state.equalsState(EVST_READY));
         // 25時間以上経過していないとcloseできない
         var _readyTimestamp = ETicketDB(_db).getUint256(sha3("events", _eventId, "readyTimestamp"));
@@ -208,10 +214,10 @@ library EticketEvent {
         // ticketGroupの情報も変更できなくなる
     }
 
-   function collectAmountSold(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _eventId)  returns (bool) {
+   function collectEvent(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _eventId)  returns (bool) {
         var _user = EticketUser.getSenderUser(_ticketDB);
         require(existsAndOwnerEvent(_ticketDB, _user.userId, _eventId));
-        var _state = ETicketDB(_ticketDB).getUint32(sha3("events", _eventId, "state"));
+        var _state = getEventState(_ticketDB, _eventId);
         require(_state.equalsState(EVST_CLOSE));
         ETicketDB(_ticketDB).setUint32(sha3("events", _eventId, "state"), _state.changeState(EVST_CLOSE, EVST_COLLECT));
         var _amountSold = ETicketDB(_ticketDB).getUint256(sha3("events", _eventId, "amountSold"));
