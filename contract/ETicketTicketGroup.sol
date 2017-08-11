@@ -7,13 +7,9 @@ import "./ETicketEvent.sol";
 import "./ETicketDB.sol";
 import "./TokenDB.sol";
 
-library EticketEvent {
+library EticketTicketGroup {
     using State for uint32;  
     using SafeMath for uint256;  
-
-
-
-
 
     // == create/modify ==
     // [ticketGroup]
@@ -33,9 +29,24 @@ library EticketEvent {
     uint32 constant TGST_UNSALABLE = 0x01;
     uint32 constant TGST_SALABLE   = 0x02;
 
-    function ticketGroupExists(uint256 _userId, uint256 _eventId, uint256 _ticketGroupId) private {
-        var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "state"));
-        require(_state != 0);
+    function getTicketGroupState(ETicketDB _db, uint256 _ticketGroupId) returns (uint32) {
+        return TicketDB(ticketDB).getUint32(sha3("ticketGroups", _ticketGroupId, "state"));
+    }
+
+    function existsAndOwnerTicketGroup(ETicketDB _db, uint256 _userId, uint256 _eventId, uint256 _ticketGroupId) private {
+        return (EticketEvent.existsAndOwnerEvent(_db, _user.userId, _eventId) &&
+            (getTicketGroupState(_db, _ticketGroupId) != 0) &&
+            (TicketDB(ticketDB).getUint32(sha3("ticketGroups", _ticketGroupId, "userId")) != _userId));
+    }
+
+    function existsTicketGroup(ETicketDB _db, uint256 _eventId, uint256 _ticketGroupId) private {
+        return (EticketEvent.existsEvent(_db, _eventId) &&
+            (getTicketGroupState(_db, _ticketGroupId)  != 0));
+    }
+
+    function creatableAndModifiable(ETicketDB _db, uint256 _eventId) returns (bool) {
+        var _state = EticketEvent.getEventState(_db, _eventId);
+        return _state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
     }
     
     function createTicketGroupCommon(
@@ -46,23 +57,23 @@ library EticketEvent {
         string _description,
         uint256 _supplyTickets,
         uint256 _maxPrice,
-        uint256 _price) private returns (uint256) {
-        validStringLength(_name, 1, 100);        
-        validStringLength(_description, 1, 3000);
+        uint256 _price
+        ) private returns (uint256) {
+        require(Validation.validStringLength(_name, 1, 100));        
+        require(Validation.validStringLength(_description, 1, 3000));
         require(_maxPrice >= _price);
-        // イベントのステータスチェック
-        var _state = EticketEvent.getEventState(_db, _eventId);
-        require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
-        
+        require(creatableAndModifiable(_db, _eventId));
         var _ticketGroupId = TicketDB(ticketDB).getAndIncrementId(sha3("ticketGroupId"));
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "name"), _name);
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "description"), _description);
-        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "suplyTickets"), _supplyTickets);
-        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "maxPrice"), _maxPrice);
-        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "price"), _price);
-        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "soldTickets"), 0);
-        TicketDB(ticketDB).setUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "lastSerialNumber"), 0);
-        TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
+        TicketDB(ticketDB).setString(sha3("ticketGroups", _ticketGroupId, "userId"), _userId);
+        TicketDB(ticketDB).setString(sha3("ticketGroups", _ticketGroupId, "eventId"), _eventId);
+        TicketDB(ticketDB).setString(sha3("ticketGroups", _ticketGroupId, "name"), _name);
+        TicketDB(ticketDB).setString(sha3("ticketGroups", _ticketGroupId, "description"), _description);
+        TicketDB(ticketDB).setUint256(sha3("ticketGroups", _ticketGroupId, "suplyTickets"), _supplyTickets);
+        TicketDB(ticketDB).setUint256(sha3("ticketGroups", _ticketGroupId, "maxPrice"), _maxPrice);
+        TicketDB(ticketDB).setUint256(sha3("ticketGroups", _ticketGroupId, "price"), _price);
+        TicketDB(ticketDB).setUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), 0);
+        TicketDB(ticketDB).setUint256(sha3("ticketGroups", _ticketGroupId, "lastSerialNumber"), 0);
+        TicketDB(ticketDB).incrementUint256(sha3("ticketGroups", _ticketGroupId,  "version"));
         return _ticketGroupId;
     }
 
@@ -73,7 +84,8 @@ library EticketEvent {
         string _description,
         uint256 _supplyTickets,
         uint256 _maxPrice,
-        uint256 _price) returns (uint256 _ticketGroupId) {
+        uint256 _price
+        ) returns (uint256 _ticketGroupId) {
         var _user = EticketUser.getSenderUser(_db);
         require(EticketEvent.existsAndOwnerEvent(_db, _user.userId, _eventId));
         _ticketGroupId = createTicketGroupCommon(_db, _user.userId, _eventId, _name, _description, _supplyTickets, _maxPrice, _price);
@@ -86,27 +98,28 @@ library EticketEvent {
         string _description,
         uint256 _supplyTickets,
         uint256 _maxPrice,
-        uint256 _price) onlyOwnerUser() returns (uint256) {
+        uint256 _price
+        ) onlyOwnerUser() returns (uint256 _ticketGroupId) {
         var _user = EticketUser.getSenderUser(_db);
         require(EticketEvent.existsAndOwnerEvent(_db, _user.userId, _eventId));
         _ticketGroupId = createTicketGroupCommon(_db, _user.userId, _eventId, _name, _description, _supplyTickets, _maxPrice, _price);
         TicketDB(ticketDB).setUint32(sha3("ticketGroups", _ticketGroupId, "state"), TGST_UNSALABLE);
     }
     
-    
-    
-    
     function setTicketGroupName(uint256 _eventId, uint256 _ticketGroupId, string _name) onlyOwnerUser() returns (bool) {
-        var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
-        eventExists(_userId, _eventId);
-        ticketGroupExists(_userId, _eventId, _ticketGroupId);
-        var _state = TicketDB(ticketDB).getUint32(sha3("users", _userId, "events", _eventId, "state"));
-        require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
-        validStringLength(_name, 1, 100);        
-        TicketDB(ticketDB).setString(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId, "name"), _name);
-        TicketDB(ticketDB).incrementUint256(sha3("users", _userId, "events", _eventId, "ticketGroups", _ticketGroupId,  "version"));
+        var _user = EticketUser.getSenderUser(_db);
+        require(existsAndOwnerTicketGroup(_db, _userId, _eventId, _ticketGroupId));
+        require(creatableAndModifiable(_db, _eventId));
+        require(Validation.validStringLength(_name, 1, 100));        
+        TicketDB(ticketDB).setString(sha3("ticketGroups", _ticketGroupId, "name"), _name);
+        TicketDB(ticketDB).incrementUint256(sha3("ticketGroups", _ticketGroupId,  "version"));
         return true;
     }
+    
+    
+    
+    
+    
     
     function setTicketGroupDescription(uint256 _eventId, uint256 _ticketGroupId, string _description) onlyOwnerUser() returns (bool) {
         var _userId = TicketDB(ticketDB).getIdMap(msg.sender);
@@ -203,4 +216,5 @@ library EticketEvent {
     }
     
 }
+
 
