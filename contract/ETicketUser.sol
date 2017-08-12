@@ -3,7 +3,7 @@ pragma solidity ^0.4.14;
 import "./Validation.sol";
 import "./ETicketDB.sol";
 
-library EticketUser {
+library ETicketUser {
     // [user] 
     // userId
     // users <userId> "address"
@@ -34,7 +34,7 @@ library EticketUser {
         require(msg.sender == _user.userAddress);  
     }
     
-    function getExistsUser(ETicketDB _db, uint256 _userId) private returns(user _user) {
+    function getExistsUser(ETicketDB _db, uint256 _userId) internal returns(user _user) {
         _user = getIdAddrById(_db, _userId);
         require(_userId == _user.userId);  
         assert(Validation.validAddress(_user.userAddress));
@@ -84,3 +84,4 @@ library EticketUser {
         return true;
     }
 }
+
