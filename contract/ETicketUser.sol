@@ -13,31 +13,31 @@ library ETicketUser {
     // users <userId> version
     // idMap <address> <userId>
 
-    struct user {
+    struct userInfo {
         address userAddress;
         uint256 userId;
     }
 
-    function getIdAddrByAddr(ETicketDB _db, address _address) private returns(user _user) {
-        _user.userId = ETicketDB(_db).getIdMap(_address);
-        _user.userAddress = ETicketDB(_db).getAddress(sha3("users", _user.userId , "address"));
+    function getIdAddrByAddr(ETicketDB _db, address _address) private returns(userInfo _userInfo) {
+        _userInfo.userId = ETicketDB(_db).getIdMap(_address);
+        _userInfo.userAddress = ETicketDB(_db).getAddress(sha3("users", _userInfo.userId , "address"));
     }
 
-    function getIdAddrById(ETicketDB _db, uint256 _userId) private returns(user _user) {
-        _user.userAddress = ETicketDB(_db).getUint32(sha3("users", _userId, "address"));
-        _user.userId = ETicketDB(_db).getIdMap(_user.userAddress);
+    function getIdAddrById(ETicketDB _db, uint256 _userId) private returns(userInfo _userInfo) {
+        _userInfo.userAddress = ETicketDB(_db).getUint32(sha3("users", _userId, "address"));
+        _userInfo.userId = ETicketDB(_db).getIdMap(_userInfo.userAddress);
     }
     
-    function getSenderUser(ETicketDB _db) internal returns(user _user) {
+    function getSenderUserInfo(ETicketDB _db) internal returns(userInfo _userInfo) {
         require(Validation.validAddress(msg.sender));
-        _user = getIdAddrByAddr(_db, msg.sender);
-        require(msg.sender == _user.userAddress);  
+        _userInfo = getIdAddrByAddr(_db, msg.sender);
+        require(msg.sender == _userInfo.userAddress);  
     }
     
-    function getExistsUser(ETicketDB _db, uint256 _userId) internal returns(user _user) {
-        _user = getIdAddrById(_db, _userId);
-        require(_userId == _user.userId);  
-        assert(Validation.validAddress(_user.userAddress));
+    function getExistsUserInfo(ETicketDB _db, uint256 _userId) internal returns(userInfo _userInfo) {
+        _userInfo = getIdAddrById(_db, _userId);
+        require(_userId == _userInfo.userId);  
+        assert(Validation.validAddress(_userInfo.userAddress));
     }
 
     function createUser(
@@ -61,26 +61,26 @@ library ETicketUser {
     }
 
     function setUserName(ETicketDB _db, string _name) internal returns (bool) {
-        var _user = getSenderUser(_db);
+        var _userInfo = getSenderUserInfo(_db);
         require(Validation.validStringLength(_name, 1, 100));        
-        ETicketDB(_db).setString(sha3("users", _user.userId, "name"), _name);
-        ETicketDB(_db).incrementUint256(sha3("users", _user.userId, "version"));
+        ETicketDB(_db).setString(sha3("users", _userInfo.userId, "name"), _name);
+        ETicketDB(_db).incrementUint256(sha3("users", _userInfo.userId, "version"));
         return true;
     }
 
     function setUserEmail(ETicketDB _db, string _email) internal returns (bool) {
-        var _user = getSenderUser(_db);
+        var _userInfo = getSenderUserInfo(_db);
         require(Validation.validStringLength(_email, 0, 100));        
-        ETicketDB(_db).setString(sha3("users", _user.userId, "email"), _email);
-        ETicketDB(_db).incrementUint256(sha3("users", _user.userId, "version"));
+        ETicketDB(_db).setString(sha3("users", _userInfo.userId, "email"), _email);
+        ETicketDB(_db).incrementUint256(sha3("users", _userInfo.userId, "version"));
         return true;
     }
 
     function setUserProfile(ETicketDB _db, string _profile) internal returns (bool) {
-        var _user = getSenderUser(_db);
+        var _userInfo = getSenderUserInfo(_db);
         require(Validation.validStringLength(_profile, 0, 1000));        
-        ETicketDB(_db).setString(sha3("users", _user.userId, "profile"), _profile);
-        ETicketDB(_db).incrementUint256(sha3("users", _user.userId, "version"));
+        ETicketDB(_db).setString(sha3("users", _userInfo.userId, "profile"), _profile);
+        ETicketDB(_db).incrementUint256(sha3("users", _userInfo.userId, "version"));
         return true;
     }
 }

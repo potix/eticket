@@ -36,23 +36,30 @@ library ETicketEvent {
     uint32 public constant EVST_CLOSE   = 0x20;
     uint32 public constant EVST_COLLECT = 0x40;
     
-    function getEventStatusCreatableAndModiableTicketGroup() internal returns (uint32) {
-        return EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY;
+    struct eventInfo {
+        uint256 userId;
+        uint256 eventId;
     }
     
+    function getEventStateCreatableAndModiableTicketGroup() internal returns (uint32) {
+        return EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY;
+    }
+
+    function getEventStateSalableTicket() internal returns (uint32) {
+        return EVST_SALE|EVST_OPEN|EVST_READY;
+    }
+
     function getEventState(ETicketDB _db, uint256 _eventId) internal returns (uint32) {
         ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
     }
     
-    function existsAndOwnerEvent(ETicketDB _db, uint256 _userId, uint256 _eventId) internal returns (bool) {
-        return ((getEventState(_db, _eventId) != 0) &&
-            (ETicketDB(_db).getUint256(sha3("events", _eventId, "userId")) == _userId));
+    function getOwnerEventInfo(ETicketDB _db, uint256 _userId, uint256 _eventId) internal returns (eventInfo _eventInfo) {
+        require(getEventState(_db, _eventId) != 0);
+        require(ETicketDB(_db).getUint256(sha3("events", _eventId, "userId")) == _userId);
+        _eventInfo.userId = _userId;
+        _eventInfo.eventId = _eventId;
     }
 
-    function existsEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-        return (getEventState(_db, _eventId) != 0);
-    }
-    
     function createEventCommon(
         ETicketDB _db, 
         uint256 _userId, 
@@ -79,8 +86,8 @@ library ETicketEvent {
         string _country,
         string _description
         ) internal returns (uint256 _eventId) {
-        var _user = ETicketUser.getSenderUser(_db);
-        _eventId = createEventCommon(_db, _user.userId,  _name,  _country,  _description);
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        _eventId = createEventCommon(_db, _userInfo.userId,  _name,  _country,  _description);
         ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), EVST_SALE);
     }
 
@@ -90,108 +97,108 @@ library ETicketEvent {
         string _country,
         string _description
         ) internal returns (uint256 _eventId) {
-        var _user = ETicketUser.getSenderUser(_db);
+        var _user = ETicketUser.getSenderUserInfo(_db);
         _eventId = createEventCommon(_db, _user.userId,  _name,  _country,  _description);
         ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), EVST_CREATE);
     }
 
     function setEventName(ETicketDB _db, uint256 _eventId, string _name) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
         require(Validation.validStringLength(_name, 1, 200));        
-        ETicketDB(_db).setString(sha3("events", _eventId, "name"), _name);
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setString(sha3("events", _eventInfo.eventId, "name"), _name);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
     }
 
     function setEventCountry(ETicketDB _db, uint256 _eventId, string _country) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
         require(Validation.validStringLength(_country, 1, 3));        
-        ETicketDB(_db).setString(sha3("events", _eventId, "country"), _country);
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setString(sha3("events", _eventInfo.eventId, "country"), _country);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
     }
 
     function setEventDescription(ETicketDB _db, uint256 _eventId, string _description) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
         require(Validation.validStringLength(_description, 0, 15000));        
-        ETicketDB(_db).setString(sha3("events", _eventId, "description"), _description);
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setString(sha3("events", _eventInfo.eventId, "description"), _description);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
     }
 
     function setEventReserveOracleUrl(ETicketDB _db, uint256 _eventId, string _reserveOracleUrl) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
         require(Validation.validStringLength(_reserveOracleUrl, 0, 2000));        
-        ETicketDB(_db).setString(sha3("events", _eventId, "reserveOracleUrl"), _reserveOracleUrl);
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setString(sha3("events", _eventInfo.eventId, "reserveOracleUrl"), _reserveOracleUrl);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
     }
 
     function setEventEnterOracleUrl(ETicketDB _db, uint256 _eventId, string _enterOracleUrl) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
         require(Validation.validStringLength(_enterOracleUrl, 0, 2000));        
-        ETicketDB(_db).setString(sha3("events", _eventId, "enterOracleUrl"), _enterOracleUrl);
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setString(sha3("events", _eventInfo.eventId, "enterOracleUrl"), _enterOracleUrl);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
     }
 
     function setEventCashbackOracleUrl(ETicketDB _db, uint256 _eventId, string _cashbackOracleUrl) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
         require(Validation.validStringLength(_cashbackOracleUrl, 0, 2000));        
-        ETicketDB(_db).setString(sha3("events", _eventId, "cashbackOracleUrl"), _cashbackOracleUrl);
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setString(sha3("events", _eventInfo.eventId, "cashbackOracleUrl"), _cashbackOracleUrl);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
     }
 
     function saleEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = getEventState(_db, _eventId);
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
+        var _state = getEventState(_db, _eventInfo.eventId);
         require(_state.includesState(EVST_CREATE|EVST_OPEN));
-        ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_CREATE|EVST_OPEN), EVST_SALE));
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setUint32(sha3("events", _eventInfo.eventId, "state"), _state.changeState((EVST_CREATE|EVST_OPEN), EVST_SALE));
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
         // チケットが購入できるようになる
     }
 
     function openEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = getEventState(_db, _eventId);
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
+        var _state = getEventState(_db, _eventInfo.eventId);
         require(_state.includesState(EVST_SALE|EVST_READY));
-        ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_SALE|EVST_READY), EVST_OPEN));
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setUint32(sha3("events", _eventInfo.eventId, "state"), _state.changeState((EVST_SALE|EVST_READY), EVST_OPEN));
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
         // reserveがenter,cashbackできるようになる
     }
 
     function readyEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = getEventState(_db, _eventId);
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
+        var _state = getEventState(_db, _eventInfo.eventId);
         require(_state.includesState(EVST_OPEN|EVST_CLOSE));
         if (_state.equalsState(EVST_OPEN)) {
-            ETicketDB(_db).setUint256(sha3("events", _eventId, "readyTimestamp"), now);
+            ETicketDB(_db).setUint256(sha3("events", _eventInfo.eventId, "readyTimestamp"), now);
         }
-        ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_OPEN|EVST_CLOSE), EVST_READY));
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setUint32(sha3("events", _eventInfo.eventId, "state"), _state.changeState((EVST_OPEN|EVST_CLOSE), EVST_READY));
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
         // 25時間後cancelができなくなる
     }
 
     function stopEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = getEventState(_db, _eventId);
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
+        var _state = getEventState(_db, _eventInfo.eventId);
         require(_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
-        ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState((EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY), EVST_STOP));
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setUint32(sha3("events", _eventInfo.eventId, "state"), _state.changeState((EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY), EVST_STOP));
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
         // イベントを中止せざるをえなくなったとき
         // reservedとかenterとかcashbackとかとかできなくなる
@@ -204,29 +211,29 @@ library ETicketEvent {
     }
 
     function closeEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) { 
-        var _user = ETicketUser.getSenderUser(_db);
-        require(existsAndOwnerEvent(_db, _user.userId, _eventId));
-        var _state = getEventState(_db, _eventId);
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        var _eventInfo = getOwnerEventInfo(_db, _userInfo.userId, _eventId);
+        var _state = getEventState(_db, _eventInfo.eventId);
         require(_state.equalsState(EVST_READY));
         // 25時間以上経過していないとcloseできない
-        var _readyTimestamp = ETicketDB(_db).getUint256(sha3("events", _eventId, "readyTimestamp"));
+        var _readyTimestamp = ETicketDB(_db).getUint256(sha3("events", _eventInfo.eventId, "readyTimestamp"));
         require(now > _readyTimestamp.add(WAIT_SECONDS));
-        ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), _state.changeState(EVST_READY, EVST_CLOSE));
-        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_db).setUint32(sha3("events", _eventInfo.eventId, "state"), _state.changeState(EVST_READY, EVST_CLOSE));
+        ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
         // reservedとかenterとかcashbackとかとかできなくなる
         // ticketGroupの情報も変更できなくなる
     }
 
    function collectEvent(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _eventId) internal returns (bool) {
-        var _user = ETicketUser.getSenderUser(_ticketDB);
-        require(existsAndOwnerEvent(_ticketDB, _user.userId, _eventId));
-        var _state = getEventState(_ticketDB, _eventId);
+        var _userInfo = ETicketUser.getSenderUserInfo(_ticketDB);
+        var _eventInfo = getOwnerEventInfo(_ticketDB, _userInfo.userId, _eventId);
+        var _state = getEventState(_ticketDB, _eventInfo.eventId);
         require(_state.equalsState(EVST_CLOSE));
-        ETicketDB(_ticketDB).setUint32(sha3("events", _eventId, "state"), _state.changeState(EVST_CLOSE, EVST_COLLECT));
-        var _amountSold = ETicketDB(_ticketDB).getUint256(sha3("events", _eventId, "amountSold"));
+        ETicketDB(_ticketDB).setUint32(sha3("events", _eventInfo.eventId, "state"), _state.changeState(EVST_CLOSE, EVST_COLLECT));
+        var _amountSold = ETicketDB(_ticketDB).getUint256(sha3("events", _eventInfo.eventId, "amountSold"));
         TokenDB(_tokenDB).addBalance(msg.sender, _amountSold);
-        ETicketDB(_ticketDB).incrementUint256(sha3("events", _eventId, "version"));
+        ETicketDB(_ticketDB).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
         return true;
         // 購入した人のトークンが回収される
         // これをやるまでは状態として記録されているだけ
