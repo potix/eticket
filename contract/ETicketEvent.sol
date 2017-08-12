@@ -60,6 +60,18 @@ library ETicketEvent {
         _eventInfo.eventId = _eventId;
     }
 
+    function addAmountSold(ETicketDB _db, uint256 _eventId, uint256 _addAmountSold) internal returns (bool) {
+        ETicketDB(_db).addUint256(sha3("events", _eventId, "admountSold"), _addAmountSold);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        return true;
+    }
+
+    function subAmountSold(ETicketDB _db, uint256 _eventId, uint256 _subAmountSould) internal returns (bool) {
+        ETicketDB(_db).subUint256(sha3("events", _eventId, "admountSold"), _subAmountSould);
+        ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
+        return true;
+    }
+
     function createEventCommon(
         ETicketDB _db, 
         uint256 _userId, 

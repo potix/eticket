@@ -81,6 +81,18 @@ library ETicketTicketGroup {
         _totalPrice.total = _totalPrice.price.mul(_amount);
     }
     
+    function addSoldTicket(ETicketDB _db, uint256 _ticketGroupId, uint256 _addAmount) internal returns (bool) {
+        ETicketDB(_db).addUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), _addAmount);
+        ETicketDB(_db).incrementUint256(sha3("ticketGroups", _ticketGroupId, "version"));
+        return true;
+    }
+    
+    function subSoldTicket(ETicketDB _db, uint256 _ticketGroupId, uint256 _subAmount) internal returns (bool) {
+        ETicketDB(_db).subUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), _subAmount);
+        ETicketDB(_db).incrementUint256(sha3("ticketGroups", _ticketGroupId, "version"));
+        return true;
+    }
+    
     function createTicketGroupCommon(
         ETicketDB _db,
         uint256 _userId,
