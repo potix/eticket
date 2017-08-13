@@ -40,24 +40,49 @@ library ETicketEvent {
         uint256 userId;
         uint256 eventId;
     }
-    
-    function getEventStateCreatableAndModiableTicketGroup() internal returns (uint32) {
-        return EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY;
-    }
-
-    function getEventStateSalableTicket() internal returns (uint32) {
-        return EVST_SALE|EVST_OPEN|EVST_READY;
-    }
 
     function getEventState(ETicketDB _db, uint256 _eventId) internal returns (uint32) {
         ETicketDB(_db).getUint32(sha3("events", _eventId, "state"));
     }
-    
+
+    function getEventReadyTimestamp(ETicketDB _db, uint256 _eventId) internal returns (uint256) {
+        ETicketDB(_db).getUint32(sha3("events", _eventId, "readyTimestamp"));
+    }
+
     function getOwnerEventInfo(ETicketDB _db, uint256 _userId, uint256 _eventId) internal returns (eventInfo _eventInfo) {
         require(getEventState(_db, _eventId) != 0);
         require(ETicketDB(_db).getUint256(sha3("events", _eventId, "userId")) == _userId);
         _eventInfo.userId = _userId;
         _eventInfo.eventId = _eventId;
+    }
+
+    function eventStateCreatableAndModiableTicketGroup(ETicketDB _db, uint256 _eventId) internal returns (bool) {
+        var _state = getEventState(_db, _eventId);
+        return _state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
+
+    function eventStateSalableTicket(ETicketDB _db, uint256 _eventId) internal returns (bool) {
+        var _state = getEventState(_db, _eventId);
+        return _state.includesState(EVST_SALE|EVST_OPEN|EVST_READY);
+    }
+
+    function eventStateModiableTransaction(ETicketDB _db, uint256 _eventId) internal returns (bool) {
+        var _state = getEventState(_db, _eventId);
+        return _state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
+    
+    function eventStateCancelableTicket(ETicketDB _db, uint256 _eventId) internal returns (bool) {
+        var _state = getEventState(_db, _eventId);
+        if (!_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY|EVST_STOP)) {
+            return false;
+        }
+        if (_state.equalsState(EVST_READY)) {
+            var _readyTimestamp = getEventReadyTimestamp(_db, _eventId);
+            if (now <= _readyTimestamp.add(WAIT_SECONDS)) {
+                return false;
+            }  
+        }
+        return true;
     }
 
     function addAmountSold(ETicketDB _db, uint256 _eventId, uint256 _addAmountSold) internal returns (bool) {
@@ -109,8 +134,8 @@ library ETicketEvent {
         string _country,
         string _description
         ) internal returns (uint256 _eventId) {
-        var _user = ETicketUser.getSenderUserInfo(_db);
-        _eventId = createEventCommon(_db, _user.userId,  _name,  _country,  _description);
+        var _userInfo = ETicketUser.getSenderUserInfo(_db);
+        _eventId = createEventCommon(_db, _userInfo.userId,  _name,  _country,  _description);
         ETicketDB(_db).setUint32(sha3("events", _eventId, "state"), EVST_CREATE);
     }
 
@@ -228,7 +253,7 @@ library ETicketEvent {
         var _state = getEventState(_db, _eventInfo.eventId);
         require(_state.equalsState(EVST_READY));
         // 25時間以上経過していないとcloseできない
-        var _readyTimestamp = ETicketDB(_db).getUint256(sha3("events", _eventInfo.eventId, "readyTimestamp"));
+        var _readyTimestamp = getEventReadyTimestamp(_db, _eventInfo.eventId);
         require(now > _readyTimestamp.add(WAIT_SECONDS));
         ETicketDB(_db).setUint32(sha3("events", _eventInfo.eventId, "state"), _state.changeState(EVST_READY, EVST_CLOSE));
         ETicketDB(_db).incrementUint256(sha3("events", _eventInfo.eventId, "version"));
