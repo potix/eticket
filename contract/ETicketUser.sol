@@ -17,8 +17,8 @@ library ETicketUser {
 
     struct user {
         ETicketDB db;
-        // members
         uint256 userId;
+        // members
         address userAddress;
         string  name;
         string  email;
@@ -26,7 +26,7 @@ library ETicketUser {
         uint256 eventUpdateTime;
         uint256 transactionUpdateTime;
         uint256 ticketContextUpdateTime;
-        // shadow values
+        // shadows
         address __userAddress;
         uint256 __eventUpdateTime;
         uint256 __transactionUpdateTime;
@@ -48,11 +48,13 @@ library ETicketUser {
         _user.eventUpdateTime = ETicketDB(_db).getUint256(sha3("users", _userId, "eventUpdateTime")); 
         _user.transactionUpdateTime = ETicketDB(_db).getUint256(sha3("users", _userId, "transactionUpdateTime")); 
         _user.ticketContextUpdateTime = ETicketDB(_db).getUint256(sha3("users", _userId, "ticketContextUpdateTime")); 
-        // set shadow values
+        // set shadows
         _user.__userAddress = _user.userAddress;
         _user.__eventUpdateTime = _user.eventUpdateTime;
         _user.__transactionUpdateTime = _user.transactionUpdateTime;
         _user.__ticketContextUpdateTime = _user.ticketContextUpdateTime;
+        var _mappedUserId = ETicketDB(_db).getIdMap(_user.userAddress);
+        require(_userId == _mappedUserId);
     }
 
     function _save(user _user) private returns (bool){
@@ -94,12 +96,10 @@ library ETicketUser {
         _user.eventUpdateTime = now;
         _user.transactionUpdateTime = now;
         _user.ticketContextUpdateTime = now;
-        
     }
     
     function getExistsUser(ETicketDB _db, uint256 _userId) internal returns(user) {
         var _user = _load(_db, _userId);
-        require(_userId == _user.userId);  
         assert(Validation.validAddress(_user.userAddress));
         return _user;
     }
