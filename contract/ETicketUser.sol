@@ -112,7 +112,7 @@ library ETicketUser {
         return _user;
     }
     
-    function update(user _user) internal returns(bool) {
+    function updateUser(user _user) internal returns(bool) {
         return _save(_user);
     }
     

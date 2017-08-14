@@ -49,7 +49,7 @@ library ETicketEvent {
         uint256 amountSold;
         uint256 readyTime;
         uint32 state;
-        uint256 ticketGroupUPdateTime;
+        uint256 ticketGroupUpdateTime;
         // parent
         ETicketUser.user user;
         // shadows
@@ -57,7 +57,7 @@ library ETicketEvent {
         uint256 __amountSold;
         uint256 __readyTime;
         uint32 __state;
-        uint256 __ticketGroupUPdateTime;
+        uint256 __ticketGroupUpdateTime;
     }
 
     function _newId(ETicketDB _db) private returns (uint256) {
@@ -78,13 +78,13 @@ library ETicketEvent {
         _userEvent.amountSold = ETicketDB(_db).getUint256(sha3("events", _eventId, "amountSold")); 
         _userEvent.readyTime = ETicketDB(_db).getUint256(sha3("events", _eventId, "readyTime")); 
         _userEvent.state = ETicketDB(_db).getUint32(sha3("events", _eventId, "state")); 
-        _userEvent.ticketGroupUPdateTime = ETicketDB(_db).getUint256(sha3("events", _eventId, "ticketGroupUPdateTime")); 
+        _userEvent.ticketGroupUpdateTime = ETicketDB(_db).getUint256(sha3("events", _eventId, "ticketGroupUpdateTime")); 
         // set shadows
         _userEvent.__userId = _userEvent.userId;
         _userEvent.__amountSold = _userEvent.amountSold;
         _userEvent.__readyTime = _userEvent.readyTime;
         _userEvent.__state = _userEvent.state;
-        _userEvent.__ticketGroupUPdateTime = _userEvent.ticketGroupUPdateTime;
+        _userEvent.__ticketGroupUpdateTime = _userEvent.ticketGroupUpdateTime;
         // parent
         _userEvent.user = ETicketUser.getExistsUser(_db, _userEvent.userId);
     }
@@ -131,15 +131,15 @@ library ETicketEvent {
             ETicketDB(_userEvent.db).setUint32(sha3("events", _userEvent.eventId, "state"), _userEvent.state);
             changed = true;
         }
-        if (_userEvent.ticketGroupUPdateTime != _userEvent.__ticketGroupUPdateTime) {
-            ETicketDB(_userEvent.db).setUint256(sha3("events", _userEvent.eventId, "ticketGroupUPdateTime"), _userEvent.ticketGroupUPdateTime);
+        if (_userEvent.ticketGroupUpdateTime != _userEvent.__ticketGroupUpdateTime) {
+            ETicketDB(_userEvent.db).setUint256(sha3("events", _userEvent.eventId, "ticketGroupUpdateTime"), _userEvent.ticketGroupUpdateTime);
             changed = true;
         }
         if (changed) {
             // XXX TODO user側に関数作るべき
             _userEvent.user.eventUpdateTime = now;
         }
-        ETicketUser.update(_userEvent.user);
+        ETicketUser.updateUser(_userEvent.user);
         return true;
     }
 
@@ -166,7 +166,7 @@ library ETicketEvent {
         _userEvent.amountSold = 0;
         _userEvent.readyTime = now;
         _userEvent.state = _state;
-        _userEvent.ticketGroupUPdateTime = now;
+        _userEvent.ticketGroupUpdateTime = now;
         _userEvent.user = _user;
         _save(_userEvent);
     }
@@ -185,6 +185,9 @@ library ETicketEvent {
         return _userEvent;
     }
 
+    function updateEvent(userEvent _userEvent) internal returns (bool) {
+        return _save(_userEvent);
+    }
 
 
 
