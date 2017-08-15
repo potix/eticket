@@ -156,58 +156,50 @@ library ETicketTransaction {
         _transaction.eventId = _ticketGroup.eventId;
         _transaction.ticketGroupId = _ticketGroup.ticketGroupId;
         _transaction.eventOwnerId = _ticketGroup.userId;
-        _transaction.buyTickets = _ticketGroup._amount;
+        _transaction.buyTickets = _amount;
         _transaction.reservedTickets = 0;
-        _transaction.buyPrice = 0;
+        _transaction.buyPrice = _ticketGroup.price;
         _transaction.totalCashBackPrice = 0;
         _transaction.state = _state;
         _transaction.ticketGroup = _ticketGroup;
-        _save(_transaction);
     }
 
+    function _renew(
+        ETicketDB _db,
+        transaction _transaction, 
+        uint256 _amount,
+        uint32 _state
+        ) private returns (transaction _newTransaction) {
+        _newTransaction.db = _db;
+        _newTransaction.transactionId = _newId(_db);
+        _newTransaction.userId = ETicketUser.getSenderUserId();
+        _newTransaction.eventId = _transaction.eventId;
+        _newTransaction.ticketGroupId = _transaction.ticketGroupId;
+        _newTransaction.eventOwnerId = _transaction.eventOwnerId;
+        _newTransaction.buyTickets = _amount;
+        _newTransaction.reservedTickets = 0;
+        _newTransaction.buyPrice = _transaction.buyPrice;
+        _newTransaction.totalCashBackPrice = 0;
+        _newTransaction.state = _state;
+        _newTransaction.ticketGroup = _transaction._ticketGroup;
+    }
 
+    function isSalableTransactionState(transaction _transaction) {
+        return _transaction.state.equalsState(TXNST_SALABLE) && ETicketTicketGroup.isSalableTransactionState(_transaction.ticketGroup);
+    }
 
+    function getTransactionTotalPrice(transaction _transaction, uint256 _amount) internal returns (uint256) {
+        return _transaction.buyPrice.mul(_amount);
+    }
 
+    function getRemainTickets(transaction _transaction) internal returns (uint256) {
+        return _transaction.buyTickets.sub(_transaction.reservedTickets);
+    }
 
-
-
-    
-    // struct totalPrice {
-    //     uint256 buyPrice;
-    //     uint256 amount;
-    //     uint256 total;
-    // }
-    
-    // function getTransactionState(ETicketDB _db, uint256 _transactionId) internal returns (uint32) {
-    //     return ETicketDB(_db).getUint32(sha3("transactions", _transactionId, "state"));
-    // }
-
-    // function getTransactionTotalPrice(ETicketDB _db, uint256 _transactionId, uint256 _amount) internal returns (totalPrice _totalPrice) {
-    //     _totalPrice.buyPrice = ETicketDB(_db).getUint256(sha3("transactions", _transactionId, "buyPrice"));
-    //     _totalPrice.amount = _amount;
-    //     _totalPrice.total = _totalPrice.buyPrice.mul(_amount);
-    // }
-
-    // function getRemainTickets(ETicketDB _db, uint256 _transactionId) internal returns (uint256) {
-    //     var _buyTickets = ETicketDB(_db).getUint256(sha3("transactions", _transactionId, "buyTickets"));
-    //     var _reservedTickets = ETicketDB(_db).getUint256(sha3("transactions", _transactionId, "reservedTickets"));
-    //     return _buyTickets.sub(_reservedTickets);
-    // }
-
-
-    
-    // function subBuyTickets(ETicketDB _db, uint256 _transactionId, uint256 _amount) internal returns (bool) {
-    //     ETicketDB(_db).subUint256(sha3("transactions", _transactionId, "buyTickets"), _amount); 
-    //     ETicketDB(_db).incrementUint256(sha3("transactions", _transactionId, "version"));
-    //     return true;
-    // }
-    
-    
-    
-    
-    
-    
-    
+    function subBuyTicket(transaction _transaction, uint256 _amount) internal returns (bool) {
+        _transaction.buyTickets = _transaction.buyTickets - _amount;
+        return true;
+    }
     
     function getExistsTransation(ETicketDB _db, uint256 _transactionId) internal returns(transaction) {
         return _load(_db, _transactionId);
@@ -220,98 +212,68 @@ library ETicketTransaction {
         return _transaction;
     }
     
-    
-    
-    
-    
     function createTransaction(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketGroupId, uint256 _amount) internal returns (bool) {
         require(Validation.validUint256Range(_amount, 1, MAX_BUYABLE_TICKETS));
-        
-        
         var _ticketGroup = ETicketTicketGroup.getExistsTicketGroup(_ticketDB, _ticketGroupId);
-        require(ETicketTicketGroup.isSalableTicketState(_ticketGroup));
+        require(ETicketTicketGroup.isSalableTicketGroupState(_ticketGroup));
         var salableTickets = ETicketTicketGroup.getSalableTickets(_ticketGroup);
         require(salableTickets >= _amount);
         var _totalPrice = ETicketTicketGroup.getTicketGroupTotalPrice(_ticketGroup, _amount);
         require(TokenDB(_tokenDB).getBalance(msg.sender) >= _totalPrice);
         var transaction = _new(_ticketDB, _ticketGroup, _amount, TXNST_UNSALABLE); 
-        ETicketTicketGroup.addSoldTicket(transaction.ticketGroup);
-
-        // ticketGroupの情報更新
-        ETicketTicketGroup.addSoldTicket(_ticketDB, _ticketGroupInfo.ticketGroupId, _amount);
-        // eventの情報更新
-        ETicketEvent.addAmountSold(_ticketDB, _ticketGroupInfo.eventId, _totalPrice.total);
-        // ユーザからお金を引く
-        TokenDB(_tokenDB).subBalance(msg.sender, _totalPrice.total);
+        ETicketTicketGroup.addSoldTicket(_transaction.ticketGroup, _amount);
+        ETicketTicketGroup.addAmountSold(_transaction.ticketGroup, _totalPrice)
+        TokenDB(_tokenDB).subBalance(msg.sender, _totalPrice);
+        return _save(_transaction);
     }
 
     function setTransactionSalable(ETicketDB _db, uint256 _transactionId) internal returns (bool) {
-        var _userInfo = ETicketUser.getSenderUserInfo(_db);
-        var _transactionInfo = getOwnerTransationInfo(_db, _userInfo.userId, _transactionId);
-        require(ETicketEvent.eventStateModiableTransaction(_db, _transactionInfo.eventId));
-        var state = ETicketDB(_db).getUint32(sha3("transactions", _transactionInfo.ticketGroupId, "state"));
-        require(state.equalsState(TXNST_UNSALABLE));
-        ETicketDB(_db).setUint32(sha3("transactions", _transactionInfo.transactionId, "state"), state.changeState(TXNST_UNSALABLE, TXNST_SALABLE));
-        ETicketDB(_db).incrementUint256(sha3("transactions", _transactionInfo.transactionId, "version"));
+        var _transaction = ETicketTicketGroup.getSenderTransaction(_db, _transactionId);
+        require(ETicketTicketGroup.isModiableTransactionState(_db, _transaction.ticketGroup.userEvent));
+        require(_transaction.state.equalsState(TXNST_UNSALABLE));
+        _transaction.state = _transaction.state.changeState(TXNST_UNSALABLE, TXNST_SALABLE));
+        return _save(_transaction);
     }
 
     function setTransactionUnsalable(ETicketDB _db, uint256 _transactionId) internal returns (bool) {
-        var _userInfo = ETicketUser.getSenderUserInfo(_db);
-        var _transactionInfo = getOwnerTransationInfo(_db, _userInfo.userId, _transactionId);
-        require(ETicketEvent.eventStateModiableTransaction(_db, _transactionInfo.eventId));
-        var state = ETicketDB(_db).getUint32(sha3("transactions", _transactionInfo.ticketGroupId, "state"));
-        require(state.equalsState(TXNST_SALABLE));
-        ETicketDB(_db).setUint32(sha3("transactions", _transactionInfo.transactionId, "state"), state.changeState(TXNST_SALABLE, TXNST_UNSALABLE));
-        ETicketDB(_db).incrementUint256(sha3("transactions", _transactionInfo.transactionId, "version"));
+        var _transaction = ETicketTicketGroup.getSenderTransaction(_db, _transactionId);
+        require(ETicketTicketGroup.isModiableTransactionState(_db, _transaction.ticketGroup.userEvent));
+        require(_transaction.state.equalsState(TXNST_SALABLE));
+        _transaction.state = _transaction.state.changeState(TXNST_SALABLE, TXNST_UNSALABLE));
+        return _save(_transaction);
     }
-    
-    function splitTransaction(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _transactionId, uint256 _amount) returns (bool) {
-        var _transactionInfo = getExistsTransationInfo(_ticketDB, _transactionId);
-        require(ETicketTicketGroup.ticketGroupStateSalableTicket(_ticketDB, _transactionInfo.eventId, _transactionInfo.ticketGroupId));
+
+    function splitTransaction(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _transactionId, uint256 _amount) returns (transaction) {
         require(Validation.validUint256Range(_amount, 1, MAX_BUYABLE_TICKETS));
-        var state = ETicketDB(_ticketDB).getUint32(sha3("transactions", _transactionInfo.ticketGroupId, "state"));
-        require(state.equalsState(TXNST_SALABLE));
-        var remainTickets = getRemainTickets(_ticketDB, _transactionId);
+        var _transaction = getExistsTransation(_ticketDB, _transactionId);
+        require(isSalableTransactionState(_transaction));
+        var _remainTickets = getRemainTickets(_transaction);
         require(remainTickets >= _amount);
-        var _totalPrice = getTransactionTotalPrice(_ticketDB, _transactionId, _amount);       
-        require(TokenDB(_tokenDB).getBalance(msg.sender) <= _totalPrice.total);
-        // チケットグループに新しい取引情報の作成
-        var _newUserInfo = ETicketUser.getSenderUserInfo(_ticketDB);
-        var _newTransactionId = ETicketDB(_ticketDB).getAndIncrementId(sha3("transactionId"));        
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "userId"), _newUserInfo.userId);
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "eventId"), _transactionInfo.eventId);
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "ticketGroupId"), _transactionInfo.ticketGroupId);
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "eventOwnerId"), _transactionInfo.eventOwnerId);
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "buyTickets"), _amount);
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "buyPrioce"), _totalPrice.buyPrice);
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "reservedTickets"), 0);
-        ETicketDB(_ticketDB).setUint256(sha3("transactions", _newTransactionId, "totalCashBackPrice"), 0);
-        ETicketDB(_ticketDB).setUint32(sha3("transactions", _newTransactionId, "state"), TXNST_UNSALABLE);
-        ETicketDB(_ticketDB).incrementUint256(sha3("transactions", _newTransactionId, "version"));
-        // 元の取引情報を更新する
-        subBuyTickets(_ticketDB, _transactionId, _amount);
-        // 元の買い手の所持金を増やす
-        TokenDB(_tokenDB).addBalance(_newUserInfo.userAddress, _totalPrice.total);
-        // 新たな書いての所持金を減らす
-        TokenDB(_tokenDB).subBalance(msg.sender, _totalPrice.total);
+        var _totalPrice = getTransactionTotalPrice(_ticketDB, _transactionId, _amount);      
+        require(TokenDB(_tokenDB).getBalance(msg.sender) <= _totalPrice);
+        var newTransaction = _renew(_ticketDB, _transaction, _amount, TXNST_UNSALABLE);
+        subBuyTickets(_transaction, _amount);
+        var transactionUser = getExistsUser(_transaction.userId);
+        _save(_transaction);
+        _save(_newTransaction);
+        TokenDB(_tokenDB).addBalance(transactionUser.userAddress, _totalPrice);
+        TokenDB(_tokenDB).subBalance(msg.sender, _totalPrice);
+        return _newTransaction;
     }
 
     function cancelTransaction(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _transactionId, uint256 _amount) internal returns (bool) {
-        var _userInfo = ETicketUser.getSenderUserInfo(_ticketDB);
-        var _transactionInfo = getOwnerTransationInfo(_ticketDB, _userInfo.userId, _transactionId);
-        require(ETicketEvent.eventStateCancelableTicket(_ticketDB, _transactionInfo.eventId));
         require(_amount > 0);
-        var _remainTickets = getRemainTickets(_ticketDB, _transactionId);
+        var _transaction = ETicketTicketGroup.getSenderTransaction(_ticketDB, _transactionId);
+        require(ETicketTicketGroup.isCancelableTransactionState(_transaction.ticketGoup));
+        var _remainTickets = getRemainTickets(_transaction);
         require(_remainTickets >= _amount);
         var _totalPrice = getTransactionTotalPrice(_ticketDB, _transactionId, _amount);
-        // 取引情報の更新
-        subBuyTickets(_ticketDB, _transactionId, _amount);
-        // ticketGroupの情報更新
-        ETicketTicketGroup.subSoldTicket(_ticketDB, _transactionInfo.ticketGroupId, _amount);
-        // eventの情報更新
-        ETicketEvent.subAmountSold(_ticketDB, _transactionInfo.eventId, _totalPrice.total);
-        // ユーザにお金を戻す
-        TokenDB(_tokenDB).addBalance(msg.sender, _totalPrice.total);
+        subBuyTickets(_transaction, _amount);
+        ETicketTicketGroup.subSoldTicket(_transaction, _amount);       
+        ETicketTicketGroup.subAmountSold(_transaction, _totalPrice)
+        TokenDB(_tokenDB).addBalance(msg.sender, _totalPricel);
+        return _save(_transaction);
     }
 }
+
 

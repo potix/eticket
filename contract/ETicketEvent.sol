@@ -192,7 +192,6 @@ library ETicketEvent {
         _userEvent.state = _state;
         _userEvent.ticketGroupUpdateTime = now;
         _userEvent.user = _user;
-        _save(_userEvent);
     }
 
     function updateEvent(userEvent _userEvent) internal returns (bool) {
@@ -203,41 +202,37 @@ library ETicketEvent {
          return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
     }
 
-    function isSalableTicketState(userEvent _userEvent) internal returns (bool) {
+    function isSalableTicketGroupState(userEvent _userEvent) internal returns (bool) {
          return _userEvent.state.includesState(EVST_SALE|EVST_OPEN|EVST_READY);
     }
 
-    // function eventStateModiableTransaction(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-    //     var _state = getEventState(_db, _eventId);
-    //     return _state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
-    // }
+    function isModiableTransactionState(userEvent _userEvent) internal returns (bool) {
+        return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
     
-    // function eventStateCancelableTicket(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-    //     var _state = getEventState(_db, _eventId);
-    //     if (!_state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY|EVST_STOP)) {
-    //         return false;
-    //     }
-    //     if (_state.equalsState(EVST_READY)) {
-    //         var _readyTimestamp = getEventReadyTimestamp(_db, _eventId);
-    //         if (now <= _readyTimestamp.add(WAIT_SECONDS)) {
-    //             return false;
-    //         }  
-    //     }
-    //     return true;
-    // }
+    function isCancelableTransactionState(userEvent _userEvent) internal returns (bool) {
+        if (!_userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY|EVST_STOP)) {
+            return false;
+        }
+        if (_userEvent.state.equalsState(EVST_READY) && _userEvent.readyTime.add(WAIT_SECONDS) < now) {
+                return false;
+        }
+        return true;
+    }
 
-    // function addAmountSold(ETicketDB _db, uint256 _eventId, uint256 _addAmountSold) internal returns (bool) {
-    //     ETicketDB(_db).addUint256(sha3("events", _eventId, "admountSold"), _addAmountSold);
-    //     ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
-    //     return true;
-    // }
+    function isSalableTransactionState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
 
-    // function subAmountSold(ETicketDB _db, uint256 _eventId, uint256 _subAmountSould) internal returns (bool) {
-    //     ETicketDB(_db).subUint256(sha3("events", _eventId, "admountSold"), _subAmountSould);
-    //     ETicketDB(_db).incrementUint256(sha3("events", _eventId, "version"));
-    //     return true;
-    // }
+    function addAmountSold(userEvent _userEvent, uint256 _amountSold) internal returns (bool) {
+        _userEvent.amountSold = _userEvent.amountSold.add(_addAmountSold);
+        return true;
+    }
 
+    function subAmountSold(userEvent _userEvent, uint256 _amountSold) internal returns (bool) {
+        _userEvent.amountSold = _userEvent.amountSold.sub(_subAmountSold);
+        return true;
+    }
 
     function getExistsEvent(ETicketDB _db, uint256 _eventId) internal returns (userEvent) {
         return _load(_db, _eventId);
@@ -388,4 +383,5 @@ library ETicketEvent {
         return _save(_userEvent);
     }
 }
+
 

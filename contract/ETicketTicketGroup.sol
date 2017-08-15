@@ -170,54 +170,44 @@ library ETicketTicketGroup {
         _ticketGroup.price = _price;
         _ticketGroup.state = _state;
         _ticketGroup.userEvent = _userEvent;
-        _save(_ticketGroup);
     }
 
+    function isSalableTicketGroupState(ticketGroup _ticketGroup) returns (bool) {
+        return _ticketGroup.state.equalsState(TGST_SALABLE) && ETicketEvent.isSalableTicketState(_ticketGroup.userEvent); 
+    }
 
+    function isModiableTransactionState(ticketGroup _ticketGroup) internal returns (bool) {
+        return ETicketEvent.isModiableTransactionState(ticketGroup.userEvent);
+    }
 
+    function isCancelableTransactionState(ticketGroup _ticketGroup) internal returns (bool) {
+        return ETicketEvent.isCancelableTransactionState(ticketGroup.userEvent);
+    }
 
+    function isSalableTransactionState(ticketGroup _ticketGroup) internal returns (bool) {
+        return ETicketEvent.isSalableTransactionState(_ticketGroup.userEvent);
+    }
 
-    // struct totalPrice {
-    //     uint256 price;
-    //     uint256 amount;
-    //     uint256 total;
-    // }
-
-    // function getTicketGroupState(ETicketDB _db, uint256 _ticketGroupId) internal returns (uint32) {
-    //     return ETicketDB(_db).getUint32(sha3("ticketGroups", _ticketGroupId, "state"));
-    // }
-    
-    
-    // function getTicketGroupMaxPrice(ETicketDB _db, uint256 _ticketGroupId) internal returns (uint256) {
-    //     return ETicketDB(_db).getUint256(sha3("ticketGroups", _ticketGroupId, "maxPrice"));
-    // }
-
-
-
-    // function ticketGroupStateSalableTicket(ETicketDB _db, uint256 _eventId, uint256 _ticketGroupId) returns (bool) {
-    //     var _ticketGroupState = getTicketGroupState(_db, _ticketGroupId); 
-    //     return ETicketEvent.eventStateSalableTicket(_db, _eventId) &&
-    //         _ticketGroupState.equalsState(TGST_SALABLE);
-    // }
-
-    function addSoldTicket(ticketGroup _ticketGroup) internal returns (bool) {
-        _ticketGroup
-        ETicketDB(_db).addUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), _addAmount);
-        ETicketDB(_db).incrementUint256(sha3("ticketGroups", _ticketGroupId, "version"));
+    function addSoldTicket(ticketGroup _ticketGroup, _amount) internal returns (bool) {
+        _ticketGroup.soldTickets = _ticketGroup.soldTickets.add(_amount);
         return true;
     }
     
-    // function subSoldTicket(ETicketDB _db, uint256 _ticketGroupId, uint256 _subAmount) internal returns (bool) {
-    //     ETicketDB(_db).subUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), _subAmount);
-    //     ETicketDB(_db).incrementUint256(sha3("ticketGroups", _ticketGroupId, "version"));
-    //     return true;
-    // }
+    function subSoldTicket(ticketGroup _ticketGroup, _amount) internal returns (bool) {
+        _ticketGroup.soldTickets = _ticketGroup.soldTickets.sub(_amount);
+        return true;
+    }
 
-
-    function isSalableTicketState(ticketGroup _ticketGroup) returns (bool) {
-        return _ticketGroup.state.equalsState(TGST_SALABLE) && ETicketEvent.isSalableTicketState(_ticketGroup.userEvent); 
+    function addAmountSold(ticketGroup _ticketGroup, _totalPrice) internal returns (bool) {
+        ETicketEvent.addAmountSold(_ticketGroup.userEvent, _totalPrice); 
+        return true;
     }
     
+    function subAmountSold(ticketGroup _ticketGroup, _totalPrice) internal returns (bool) {
+        ETicketEvent.subAmountSold(_ticketGroup.userEvent, _totalPrice); 
+        return true;
+    }
+
     function getTicketGroupTotalPrice(ticketGroup _ticketGroup, uint256 _amount) internal returns (uint256) {
         return _ticketGroup.price.mul(_amount);
     }
@@ -349,4 +339,5 @@ library ETicketTicketGroup {
         return _save(_ticketGroup);
     }
 }
+
 
