@@ -191,12 +191,7 @@ library ETicketTicketGroup {
     // function getTicketGroupMaxPrice(ETicketDB _db, uint256 _ticketGroupId) internal returns (uint256) {
     //     return ETicketDB(_db).getUint256(sha3("ticketGroups", _ticketGroupId, "maxPrice"));
     // }
-    
-    // function getTicketGroupTotalPrice(ETicketDB _db, uint256 _ticketGroupId, uint256 _amount) internal returns (totalPrice _totalPrice) {
-    //     _totalPrice.price = ETicketDB(_db).getUint256(sha3("ticketGroups", _ticketGroupId, "price"));
-    //     _totalPrice.amount = _amount;
-    //     _totalPrice.total = _totalPrice.price.mul(_amount);
-    // }
+
 
 
     // function ticketGroupStateSalableTicket(ETicketDB _db, uint256 _eventId, uint256 _ticketGroupId) returns (bool) {
@@ -205,11 +200,12 @@ library ETicketTicketGroup {
     //         _ticketGroupState.equalsState(TGST_SALABLE);
     // }
 
-    // function addSoldTicket(ETicketDB _db, uint256 _ticketGroupId, uint256 _addAmount) internal returns (bool) {
-    //     ETicketDB(_db).addUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), _addAmount);
-    //     ETicketDB(_db).incrementUint256(sha3("ticketGroups", _ticketGroupId, "version"));
-    //     return true;
-    // }
+    function addSoldTicket(ticketGroup _ticketGroup) internal returns (bool) {
+        _ticketGroup
+        ETicketDB(_db).addUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), _addAmount);
+        ETicketDB(_db).incrementUint256(sha3("ticketGroups", _ticketGroupId, "version"));
+        return true;
+    }
     
     // function subSoldTicket(ETicketDB _db, uint256 _ticketGroupId, uint256 _subAmount) internal returns (bool) {
     //     ETicketDB(_db).subUint256(sha3("ticketGroups", _ticketGroupId, "soldTickets"), _subAmount);
@@ -220,6 +216,10 @@ library ETicketTicketGroup {
 
     function isSalableTicketState(ticketGroup _ticketGroup) returns (bool) {
         return _ticketGroup.state.equalsState(TGST_SALABLE) && ETicketEvent.isSalableTicketState(_ticketGroup.userEvent); 
+    }
+    
+    function getTicketGroupTotalPrice(ticketGroup _ticketGroup, uint256 _amount) internal returns (uint256) {
+        return _ticketGroup.price.mul(_amount);
     }
 
     function getSalableTickets(ticketGroup _ticketGroup) internal returns (uint256) {
