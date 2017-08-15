@@ -172,6 +172,10 @@ library ETicketTicketGroup {
         _ticketGroup.userEvent = _userEvent;
     }
 
+    function updateTicketGroup(ticketGroup _ticketGroup) internal returns (bool) {
+        return _save(_ticketGroup);
+    }
+
     function isSalableTicketGroupState(ticketGroup _ticketGroup) returns (bool) {
         return _ticketGroup.state.equalsState(TGST_SALABLE) && ETicketEvent.isSalableTicketState(_ticketGroup.userEvent); 
     }

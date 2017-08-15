@@ -54,6 +54,7 @@ library ETicketTransaction {
         uint256 totalCashBackPrice;
         uint32 state;
         // parent
+        ETicketUser.user user;
         ETicketTicketGroup.ticketGroup ticketGroup;
         // shadows
         uint256 __userId;
@@ -96,6 +97,7 @@ library ETicketTransaction {
          require(_transaction.state != 0);
         // parent
         _transaction.ticketGroup = ETicketTicketGroup.getExistsTicketGroup(_db, _transaction.ticketGroupId);
+        _transaction.user = ETicketUser.getExistsUser(_db, _transaction.userId);
     }
 
     function _save(transaction _transaction) private returns (bool){
@@ -138,21 +140,23 @@ library ETicketTransaction {
         }
         if (changed) {
             // XXX TODO 親？側に関数作るべき
-            _transaction.ticketGroup.userEvent.user.transactionUpdateTime = now;
+            _transaction.user.transactionUpdateTime = now;
         }
-        ETicketTicketGroup.updateEvent(_transaction.userEvent);
+        ETicketTicketGroup.updateTicketGroup(_transaction.ticketGroup);
+        ETicketUSer.updateUser(_transaction.user);
         return true;
     }
 
     function _new(
         ETicketDB _db,
+        ETicketUser.user _user, 
         ETicketTicketGroup.ticketGroup _ticketGroup, 
         uint256 _amount,
         uint32 _state
         ) private returns (transaction _transaction) {
         _transaction.db = _db;
         _transaction.transactionId = _newId(_db);
-        _transaction.userId = ETicketUser.getSenderUserId();
+        _transaction.userId = _user.userId;
         _transaction.eventId = _ticketGroup.eventId;
         _transaction.ticketGroupId = _ticketGroup.ticketGroupId;
         _transaction.eventOwnerId = _ticketGroup.userId;
@@ -162,17 +166,19 @@ library ETicketTransaction {
         _transaction.totalCashBackPrice = 0;
         _transaction.state = _state;
         _transaction.ticketGroup = _ticketGroup;
+        _transaction.user = _user;
     }
 
-    function _renew(
+    function _clone(
         ETicketDB _db,
+        ETicketUser.user _user, 
         transaction _transaction, 
         uint256 _amount,
         uint32 _state
         ) private returns (transaction _newTransaction) {
         _newTransaction.db = _db;
         _newTransaction.transactionId = _newId(_db);
-        _newTransaction.userId = ETicketUser.getSenderUserId();
+        _newTransaction.userId = _user.userId;
         _newTransaction.eventId = _transaction.eventId;
         _newTransaction.ticketGroupId = _transaction.ticketGroupId;
         _newTransaction.eventOwnerId = _transaction.eventOwnerId;
@@ -182,6 +188,7 @@ library ETicketTransaction {
         _newTransaction.totalCashBackPrice = 0;
         _newTransaction.state = _state;
         _newTransaction.ticketGroup = _transaction._ticketGroup;
+        _transaction.user = _user;
     }
 
     function isSalableTransactionState(transaction _transaction) {
@@ -216,11 +223,10 @@ library ETicketTransaction {
         require(Validation.validUint256Range(_amount, 1, MAX_BUYABLE_TICKETS));
         var _ticketGroup = ETicketTicketGroup.getExistsTicketGroup(_ticketDB, _ticketGroupId);
         require(ETicketTicketGroup.isSalableTicketGroupState(_ticketGroup));
-        var salableTickets = ETicketTicketGroup.getSalableTickets(_ticketGroup);
-        require(salableTickets >= _amount);
+        require(ETicketTicketGroup.getSalableTickets(_ticketGroup) >= _amount);
         var _totalPrice = ETicketTicketGroup.getTicketGroupTotalPrice(_ticketGroup, _amount);
         require(TokenDB(_tokenDB).getBalance(msg.sender) >= _totalPrice);
-        var transaction = _new(_ticketDB, _ticketGroup, _amount, TXNST_UNSALABLE); 
+        var transaction = _new(_ticketDB, ETicketUser.getSenderUser(_db), _ticketGroup, _amount, TXNST_UNSALABLE); 
         ETicketTicketGroup.addSoldTicket(_transaction.ticketGroup, _amount);
         ETicketTicketGroup.addAmountSold(_transaction.ticketGroup, _totalPrice)
         TokenDB(_tokenDB).subBalance(msg.sender, _totalPrice);
@@ -247,17 +253,15 @@ library ETicketTransaction {
         require(Validation.validUint256Range(_amount, 1, MAX_BUYABLE_TICKETS));
         var _transaction = getExistsTransation(_ticketDB, _transactionId);
         require(isSalableTransactionState(_transaction));
-        var _remainTickets = getRemainTickets(_transaction);
-        require(remainTickets >= _amount);
+        require(getRemainTickets(_transaction) >= _amount);
         var _totalPrice = getTransactionTotalPrice(_ticketDB, _transactionId, _amount);      
         require(TokenDB(_tokenDB).getBalance(msg.sender) <= _totalPrice);
-        var newTransaction = _renew(_ticketDB, _transaction, _amount, TXNST_UNSALABLE);
+        var _newTransaction = _clone(_ticketDB, ETicketUser.getSenderUser(_db), _transaction, _amount, TXNST_UNSALABLE);
         subBuyTickets(_transaction, _amount);
-        var transactionUser = getExistsUser(_transaction.userId);
         _save(_transaction);
         _save(_newTransaction);
-        TokenDB(_tokenDB).addBalance(transactionUser.userAddress, _totalPrice);
-        TokenDB(_tokenDB).subBalance(msg.sender, _totalPrice);
+        TokenDB(_tokenDB).addBalance(_transaction.user.userAddress, _totalPrice);
+        TokenDB(_tokenDB).subBalance(_newTransaction.user.userAddress, _totalPrice);
         return _newTransaction;
     }
 
@@ -265,8 +269,7 @@ library ETicketTransaction {
         require(_amount > 0);
         var _transaction = ETicketTicketGroup.getSenderTransaction(_ticketDB, _transactionId);
         require(ETicketTicketGroup.isCancelableTransactionState(_transaction.ticketGoup));
-        var _remainTickets = getRemainTickets(_transaction);
-        require(_remainTickets >= _amount);
+        require(getRemainTickets(_transaction) >= _amount);
         var _totalPrice = getTransactionTotalPrice(_ticketDB, _transactionId, _amount);
         subBuyTickets(_transaction, _amount);
         ETicketTicketGroup.subSoldTicket(_transaction, _amount);       
