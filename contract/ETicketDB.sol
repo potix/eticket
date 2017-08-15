@@ -60,7 +60,11 @@ contract ETicketDB is ContractAllowable {
     function getString(bytes32 _key) constant returns (string) {
         return strings[_key];
     }
-    
+
+    function getStringSha3(bytes32 _key) constant returns (bytes32) {
+        return sha3(strings[_key]);
+    }
+
     // uint32の値を格納する領域
     mapping(bytes32 => uint32) uint32Values;
 
@@ -99,8 +103,4 @@ contract ETicketDB is ContractAllowable {
     // solidityの制約でデータ取得が困難なな場合があるので一旦DBから直接読むようにしておく
     // metoropolisアップデートで解消されると思われるので、解消したらticketDBに移す
 }
-
-
-
-
 

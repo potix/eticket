@@ -41,11 +41,17 @@ library ETicketEvent {
         // members
         uint256 userId;
         string name;
+        bytes32 nameSha3;
         string country;
+        bytes32 countrySha3;
         string description;
+        bytes32 descriptionSha3;
         string reserveOracleUrl;
+        bytes32 reserveOracleUrlSha3;
         string enterOracleUrl;
+        bytes32 enterOracleUrlSha3;
         string cashbackOracleUrl;
+        bytes32 cashbackOracleUrlSha3;
         uint256 amountSold;
         uint256 readyTime;
         uint32 state;
@@ -54,6 +60,12 @@ library ETicketEvent {
         ETicketUser.user user;
         // shadows
         uint256 __userId;
+        bytes32 __nameha3;
+        bytes32 __countrySha3;
+        bytes32 __descriptionSha3;
+        bytes32 __reserveOracleUrlSha3;
+        bytes32 __enterOracleUrlSha3;
+        bytes32 __cashbackOracleUrlSha3;
         uint256 __amountSold;
         uint256 __readyTime;
         uint32 __state;
@@ -68,23 +80,29 @@ library ETicketEvent {
         _userEvent.db = _db;
         _userEvent.eventId = _eventId;
         _userEvent.userId = ETicketDB(_db).getUint256(sha3("events", _eventId, "userId"));
-        // not supported string
-        //_userEvent.name = ETicketDB(_db).getString(sha3("events", _eventId, "name")); 
-        //_userEvent.country = ETicketDB(_db).getString(sha3("events", _eventId, "country")); 
-        //_userEvent.description = ETicketDB(_db).getString(sha3("events", _eventId, "description")); 
-        //_userEvent.reserveOracleUrl = ETicketDB(_db).getString(sha3("events", _eventId, "reserveOracleUrl")); 
-        //_userEvent.enterOracleUrl = ETicketDB(_db).getString(sha3("events", _eventId, "enterOracleUrl")); 
-        //_userEvent.cashbackOracleUrl = ETicketDB(_db).getString(sha3("events", _eventId, "cashbackOracleUrl")); 
+        _userEvent.nameSha3 = ETicketDB(_db).getStringSha3(sha3("events", _eventId, "name")); 
+        _userEvent.countrySha3 = ETicketDB(_db).getStringSha3(sha3("events", _eventId, "country")); 
+        _userEvent.descriptionSha3 = ETicketDB(_db).getStringSha3(sha3("events", _eventId, "description")); 
+        _userEvent.reserveOracleUrlSha3 = ETicketDB(_db).getStringSha3(sha3("events", _eventId, "reserveOracleUrl")); 
+        _userEvent.enterOracleUrlSha3 = ETicketDB(_db).getStringSha3(sha3("events", _eventId, "enterOracleUrl")); 
+        _userEvent.cashbackOracleUrlSha3 = ETicketDB(_db).getStringSha3(sha3("events", _eventId, "cashbackOracleUrl")); 
         _userEvent.amountSold = ETicketDB(_db).getUint256(sha3("events", _eventId, "amountSold")); 
         _userEvent.readyTime = ETicketDB(_db).getUint256(sha3("events", _eventId, "readyTime")); 
         _userEvent.state = ETicketDB(_db).getUint32(sha3("events", _eventId, "state")); 
         _userEvent.ticketGroupUpdateTime = ETicketDB(_db).getUint256(sha3("events", _eventId, "ticketGroupUpdateTime")); 
         // set shadows
         _userEvent.__userId = _userEvent.userId;
+        _userEvent.__nameSha3 = _userEvent.nameSha3;
+        _userEvent.__countrySha3 = _userEvent.countrySha3;
+        _userEvent.__descriptionSha3 = _userEvent.descriptionSha3;
+        _userEvent.__reserveOracleUrlSha3 = _userEvent.reserveOracleUrlSha3;
+        _userEvent.__enterOracleUrlSha3 = _userEvent.enterOracleUrlSha3;
+        _userEvent.__cashbackOracleUrlSha3 = _userEvent.cashbackOracleUrlSha3;
         _userEvent.__amountSold = _userEvent.amountSold;
         _userEvent.__readyTime = _userEvent.readyTime;
         _userEvent.__state = _userEvent.state;
         _userEvent.__ticketGroupUpdateTime = _userEvent.ticketGroupUpdateTime;
+        require(_userEvent.state != 0);
         // parent
         _userEvent.user = ETicketUser.getExistsUser(_db, _userEvent.userId);
     }
@@ -95,27 +113,27 @@ library ETicketEvent {
             ETicketDB(_userEvent.db).setUint256(sha3("events", _userEvent.eventId, "userId"), _userEvent.userId);
             changed = true;
         }
-        if (bytes(_userEvent.name).length != 0) {
+        if (_userEvent.nameSha3 != 0 _userEvent.__nameSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "name"), _userEvent.name);
             changed = true;
         }
-        if (bytes(_userEvent.country).length != 0) {
+        if (_userEvent.countrySha3 != 0 _userEvent.__countrySha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "country"), _userEvent.country);
             changed = true;
         }
-        if (bytes(_userEvent.description).length != 0) {
+        if (_userEvent.descriptionSha3 != 0 _userEvent.__descriptionSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "description"), _userEvent.description);
             changed = true;
         }
-        if (bytes(_userEvent.reserveOracleUrl).length != 0) {
+        if (_userEvent.reserveOracleUrlSha3 != 0 _userEvent.__reserveOracleUrlSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "reserveOracleUrl"), _userEvent.reserveOracleUrl);
             changed = true;
         }
-        if (bytes(_userEvent.enterOracleUrl).length != 0) {
+        if (_userEvent.enterOracleUrlSha3 != 0 _userEvent.__enterOracleUrlSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "enterOracleUrl"), _userEvent.enterOracleUrl);
             changed = true;
         }
-        if (bytes(_userEvent.cashbackOracleUrl).length != 0) {
+        if (_userEvent.cashbackOracleUrlSha3 != 0 _userEvent.__cashbackOracleUrlSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "cashbackOracleUrl"), _userEvent.cashbackOracleUrl);
             changed = true;
         }
@@ -158,11 +176,17 @@ library ETicketEvent {
         _userEvent.eventId = _newId(_db);
         _userEvent.userId = _user.userId;
         _userEvent.name = _name;
+        _userEvent.nameSha3 = sha3(_name);
         _userEvent.country = _country;
+        _userEvent.countrySha3 = sha3(_country);
         _userEvent.description = _description;
+        _userEvent.descriptionSha3 = sha3(_description);
         _userEvent.reserveOracleUrl = _reserveOracleUrl;
+        _userEvent.reserveOracleUrlSha3 = sha3(_reserveOracleUrl);
         _userEvent.enterOracleUrl = _enterOracleUrl;
+        _userEvent.enterOracleUrlSha3 = sha3(_enterOracleUrl);
         _userEvent.cashbackOracleUrl = _cashbackOracleUrl;
+        _userEvent.cashbackOracleUrlSha3 = sha3(_cashbackOracleUrl);
         _userEvent.amountSold = 0;
         _userEvent.readyTime = now;
         _userEvent.state = _state;
@@ -171,37 +195,17 @@ library ETicketEvent {
         _save(_userEvent);
     }
 
-    function getExistsEventInfo(ETicketDB _db, uint256 _eventId) internal returns (userEvent) {
-        var _userEvent = _load(_db, _eventId);
-        require(_userEvent.state != 0);
-        return _userEvent;
-    }
-
-    function getSenderEvent(ETicketDB _db,  uint256 _eventId) internal returns (userEvent) {
-        var user = ETicketUser.getSenderUser(_db);
-        var _userEvent = _load(_db, _eventId);
-        require(_userEvent.state != 0);
-        require(_userEvent.userId != user.userId);
-        return _userEvent;
-    }
-
     function updateEvent(userEvent _userEvent) internal returns (bool) {
         return _save(_userEvent);
     }
 
+    function isCreatableAndModiableTicketGroupState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
 
-
-    
-
-    // function eventStateCreatableAndModiableTicketGroup(userEvent _userEvent) internal returns (bool) {
-    //     var _state = getEventState(_db, _eventId);
-    //     return _state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
-    // }
-
-    // function eventStateSalableTicket(ETicketDB _db, uint256 _eventId) internal returns (bool) {
-    //     var _state = getEventState(_db, _eventId);
-    //     return _state.includesState(EVST_SALE|EVST_OPEN|EVST_READY);
-    // }
+    function isSalableTicketState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_SALE|EVST_OPEN|EVST_READY);
+    }
 
     // function eventStateModiableTransaction(ETicketDB _db, uint256 _eventId) internal returns (bool) {
     //     var _state = getEventState(_db, _eventId);
@@ -235,9 +239,16 @@ library ETicketEvent {
     // }
 
 
+    function getExistsEvent(ETicketDB _db, uint256 _eventId) internal returns (userEvent) {
+        return _load(_db, _eventId);
+    }
 
-
-
+    function getSenderEvent(ETicketDB _db,  uint256 _eventId) internal returns (userEvent) {
+        var _user = ETicketUser.getSenderUser(_db);
+        var _userEvent = _load(_db, _eventId);
+        require(_userEvent.userId != _user.userId);
+        return _userEvent;
+    }
 
     function createEventCommon(
         ETicketDB _db, 
@@ -286,6 +297,7 @@ library ETicketEvent {
         require(Validation.validStringLength(_name, 1, 200));        
         var _userEvent = getSenderEvent(_db, _eventId);
         _userEvent.name = _name;
+        _userEvent.nameSha3 = sha3(_name);
         return _save(_userEvent);
     }
 
@@ -293,6 +305,7 @@ library ETicketEvent {
         require(Validation.validStringLength(_country, 1, 3));        
         var _userEvent = getSenderEvent(_db, _eventId);
         _userEvent.country = _country;
+        _userEvent.countrySha3 = sha3(_country);
         return _save(_userEvent);
     }
 
@@ -300,6 +313,7 @@ library ETicketEvent {
         require(Validation.validStringLength(_description, 0, 15000));
         var _userEvent = getSenderEvent(_db, _eventId);
         _userEvent.description = _description;
+        _userEvent.descriptionSha3 = sha3(_description);
         return _save(_userEvent);
     }
 
@@ -307,6 +321,7 @@ library ETicketEvent {
         require(Validation.validStringLength(_reserveOracleUrl, 0, 2000));        
         var _userEvent = getSenderEvent(_db, _eventId);
         _userEvent.reserveOracleUrl = _reserveOracleUrl;
+        _userEvent.reserveOracleUrlSha3 = sha3(_reserveOracleUrl);
         return _save(_userEvent);
     }
 
@@ -314,6 +329,7 @@ library ETicketEvent {
         require(Validation.validStringLength(_enterOracleUrl, 0, 2000));        
         var _userEvent = getSenderEvent(_db, _eventId);
         _userEvent.enterOracleUrl = _enterOracleUrl;
+        _userEvent.enterOracleUrlSha3 = sha3(_enterOracleUrl);
         return _save(_userEvent);
     }
 
@@ -321,20 +337,21 @@ library ETicketEvent {
         require(Validation.validStringLength(_cashbackOracleUrl, 0, 2000));        
         var _userEvent = getSenderEvent(_db, _eventId);
         _userEvent.cashbackOracleUrl = _cashbackOracleUrl;
+        _userEvent.cashbackOracleUrlSha3 = sha3(_cashbackOracleUrl);
         return _save(_userEvent);
     }
     
     function saleEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
         var _userEvent = getSenderEvent(_db, _eventId);
         require(_userEvent.state.includesState(EVST_CREATE|EVST_OPEN));
-        _userEvent.state.changeState((EVST_CREATE|EVST_OPEN), EVST_SALE);
+        _userEvent.state = _userEvent.state.changeState((EVST_CREATE|EVST_OPEN), EVST_SALE);
         return _save(_userEvent);
     }
 
     function openEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
         var _userEvent = getSenderEvent(_db, _eventId);
         require(_userEvent.state.includesState(EVST_SALE|EVST_READY));
-        _userEvent.state.changeState((EVST_SALE|EVST_READY), EVST_OPEN);
+        _userEvent.state = _userEvent.state.changeState((EVST_SALE|EVST_READY), EVST_OPEN);
         return _save(_userEvent);
     }
 
@@ -344,14 +361,14 @@ library ETicketEvent {
          if (_userEvent.state.equalsState(EVST_OPEN)) {
             _userEvent.readyTime = now;
         }
-        _userEvent.state.changeState((EVST_OPEN|EVST_CLOSE), EVST_READY);
+        _userEvent.state = _userEvent.state.changeState((EVST_OPEN|EVST_CLOSE), EVST_READY);
         return _save(_userEvent);
     }
 
     function stopEvent(ETicketDB _db, uint256 _eventId) internal returns (bool) {
         var _userEvent = getSenderEvent(_db, _eventId);
         require(_userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY));
-        _userEvent.state.changeState((EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY), EVST_STOP);
+        _userEvent.state = _userEvent.state.changeState((EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY), EVST_STOP);
         return _save(_userEvent);
     }
 
@@ -359,14 +376,14 @@ library ETicketEvent {
         var _userEvent = getSenderEvent(_db, _eventId);
         require(_userEvent.state.equalsState(EVST_READY));
         require(now > _userEvent.readyTime.add(WAIT_SECONDS));
-        _userEvent.state.changeState(EVST_READY, EVST_CLOSE);
+        _userEvent.state = _userEvent.state.changeState(EVST_READY, EVST_CLOSE);
         return _save(_userEvent);
     }
 
    function collectEvent(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _eventId) internal returns (bool) {
         var _userEvent = getSenderEvent(_ticketDB, _eventId);
         require(_userEvent.state.equalsState(EVST_CLOSE));
-        _userEvent.state.changeState(EVST_CLOSE, EVST_COLLECT);
+        _userEvent.state = _userEvent.state.changeState(EVST_CLOSE, EVST_COLLECT);
         TokenDB(_tokenDB).addBalance(msg.sender, _userEvent.amountSold);
         return _save(_userEvent);
     }
