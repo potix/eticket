@@ -206,7 +206,7 @@ library ETicketEvent {
          return _userEvent.state.includesState(EVST_SALE|EVST_OPEN|EVST_READY);
     }
 
-    function isModiableTransactionState(userEvent _userEvent) internal returns (bool) {
+    function isModifiableTransactionState(userEvent _userEvent) internal returns (bool) {
         return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
     }
     
@@ -227,6 +227,22 @@ library ETicketEvent {
     function isCreatableTicketContextState(userEvent _userEvent) internal returns (bool) {
          return _userEvent.state.includesState(EVST_OPEN|EVST_READY);
     }
+    
+    function isTransferableTicketContextState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
+
+    function isModifiableTicketContextState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
+
+    function isSalableTicketContextState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
+
+    function isCashBackTicketContextState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
+    }
 
     function addAmountSold(userEvent _userEvent, uint256 _amountSold) internal returns (bool) {
         _userEvent.amountSold = _userEvent.amountSold.add(_amountSold);
@@ -236,6 +252,10 @@ library ETicketEvent {
     function subAmountSold(userEvent _userEvent, uint256 _amountSold) internal returns (bool) {
         _userEvent.amountSold = _userEvent.amountSold.sub(_amountSold);
         return true;
+    }
+    
+    function getReserveOracleUrl(userEvent _userEvent) internal returns (string) {
+        return _userEvent.reserveOracleUrl;
     }
 
     function getEventUserId(userEvent _userEvent) internal returns (uint256) {

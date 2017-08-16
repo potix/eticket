@@ -21,12 +21,13 @@ library ETicketTicketContext {
     // ticketContexts <ticketContextId> transactionId
     // ticketContexts <ticketContextId> reservedUrl
     // ticketContexts <ticketContextId> enteredUrl
+    // ticketContexts <ticketContextId> cashBackCode
     // ticketContexts <ticketContextId> cashBackAmount
     // ticketContexts <ticketContextId> enterCode
     // ticketContexts <ticketContextId> serialNumber
     // ticketContexts <ticketContextId> BuyPrice
     // ticketContexts <ticketContextId> salePrice
-    // ticketContexts <ticketContextId> state [ 0x10 CASHEBACKED, 0x01 SALABLE, 0x02 UNSALABLE, 0x04 ENTERED ]
+    // ticketContexts <ticketContextId> state [ 0x01 SALABLE, 0x02 UNSALABLE, 0x04 ENTERED ]
     // == related == 
     // [transaction]
     // transactions <ticketContextId> buyTickets
@@ -41,7 +42,6 @@ library ETicketTicketContext {
     uint32 constant TKTCTX_SALABLE    = 0x01;
     uint32 constant TKTCTX_UNSALABLE  = 0x02;
     uint32 constant TKTCTX_ENTERED    = 0x04;
-    uint32 constant TKTCTX_CASHBACKED = 0x10;
 
     struct ticketContext {
         ETicketDB db;
@@ -53,6 +53,8 @@ library ETicketTicketContext {
         bytes32 reservedUrlSha3;
         string enteredUrl;
         bytes32 enteredUrlSha3;
+        string cashBackCode;
+        bytes32 cashBackCodeSha3;
         uint256 cashBackAmount;
         uint32 enterCode;
         uint256 serialNumber;
@@ -65,6 +67,7 @@ library ETicketTicketContext {
         uint256 __transactionId;
         bytes32 __reservedUrlSha3;
         bytes32 __enteredUrlSha3;
+        bytes32 __cashBackCodeSha3;
         uint256 __cashBackAmount;
         uint32 __enterCode;
         uint256 __serialNumber;
@@ -86,6 +89,7 @@ library ETicketTicketContext {
         _ticketContext.transactionId = ETicketDB(_db).getUint256(sha3("ticketContexts", _ticketContextId, "transactionId"));
         _ticketContext.reservedUrlSha3 = ETicketDB(_db).getStringSha3(sha3("ticketContexts", _ticketContextId, "reservedUrl"));
         _ticketContext.enteredUrlSha3 = ETicketDB(_db).getStringSha3(sha3("ticketContexts", _ticketContextId, "enteredUrl"));
+        _ticketContext.cashBackCodeSha3 = ETicketDB(_db).getStringSha3(sha3("ticketContexts", _ticketContextId, "cashBackCode"));
         _ticketContext.cashBackAmount = ETicketDB(_db).getUint256(sha3("ticketContexts", _ticketContextId, "cashBackAmount"));
         _ticketContext.enterCode = ETicketDB(_db).getUint32(sha3("ticketContexts", _ticketContextId, "enterCode"));
         _ticketContext.serialNumber = ETicketDB(_db).getUint256(sha3("ticketContexts", _ticketContextId, "serialNumber"));
@@ -123,6 +127,10 @@ library ETicketTicketContext {
             ETicketDB(_ticketContext.db).setString(sha3("ticketContexts", _ticketContext.ticketContextId, "enteredUrl"), _ticketContext.enteredUrl);
             changed = true;
         }
+        if (_ticketContext.cashBackCodeSha3 != _ticketContext.__cashBackCodeSha3) {
+            ETicketDB(_ticketContext.db).setString(sha3("ticketContexts", _ticketContext.ticketContextId, "cashBackCode"), _ticketContext.cashBackCode);
+            changed = true;
+        }
         if (_ticketContext.cashBackAmount != _ticketContext.cashBackAmount) {
             ETicketDB(_ticketContext.db).setUint256(sha3("ticketContexts", _ticketContext.ticketContextId, "cashBackAmount"), _ticketContext.cashBackAmount);
             changed = true;
@@ -152,6 +160,7 @@ library ETicketTicketContext {
         ETicketDB _db,
         ETicketUser.user _user, 
         ETicketTransaction.transaction _transaction,
+        string _reservedUrl,
         uint256 _serialNumber,
         uint32 _state
         ) private returns (ticketContext _ticketContext) {
@@ -159,16 +168,53 @@ library ETicketTicketContext {
         _ticketContext.transactionId = _newId(_db);
         _ticketContext.userId = _user.userId;
         _ticketContext.transactionId = _transaction.transactionId;
-        _ticketContext.reservedUrl = "";
+        _ticketContext.reservedUrl = _reservedUrl;
         _ticketContext.reservedUrlSha3 = sha3(_ticketContext.reservedUrl);
         _ticketContext.enteredUrl = "";
         _ticketContext.enteredUrlSha3 = sha3(_ticketContext.enteredUrl);
+        _ticketContext.cashBackCode = "";
+        _ticketContext.cashBackCodeSha3 = sha3(_ticketContext.cashBackCode);
         _ticketContext.cashBackAmount = 0;
         _ticketContext.enterCode = getRandomCode(_ticketContext.transactionId);
         _ticketContext.serialNumber = _serialNumber;
         _ticketContext.state = _state;
         _ticketContext.transaction = _transaction;
         _ticketContext.user = _user;
+    }
+    
+    function isModifiableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
+        return ETicketTransaction.isModifiableTicketContextState(_ticketContext.transaction);
+    }
+    
+    function isTransferableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
+        return _ticketContext.state.includesState(TKTCTX_SALABLE|TKTCTX_UNSALABLE) && ETicketTransaction.isTransferableTicketContextState(_ticketContext.transaction)
+    }
+    
+    function isSalableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
+        return _ticketContext.state.equalsState(TKTCTX_SALABLE) && ETicketTransaction.isSalableTicketContextState(_ticketContext.transaction);
+    }
+    
+    function isCashBackTicketContextState(ticketContext _ticketContext) internal returns (bool) {
+        return ETicketTransaction.isCashBackTicketContextState(_ticketContext.transaction);
+    }
+    
+    function getTransactionPrice(ticketContext _ticketContext) internal returns (uint256) {
+        return ETicketTransaction.getTransactionPrice(_ticketContext.transaction); 
+    }
+    
+    function getExistsTicketContext(ETicketDB _db, uint256 _ticketContextId) internal returns(ticketContext) {
+        return _load(_db, _ticketContextId);
+    }
+
+    function getSenderTicketContext(ETicketDB _db, uint256 _ticketContextId) internal returns(ticketContext) {
+        var _user = ETicketUser.getSenderUser(_db);
+        var _ticketContext = _load(_db, _ticketContextId);
+        require(_ticketContext.userId != _user.userId);
+        return _ticketContext;
+    }
+    
+    function __callback(bytes32 myid, string result) internal {
+        if (!validIds[myid]) throw;
     }
     
     function createTicketcontext(ETicketDB _db, uint256 _transactionId, uint256 _amount) internal returns (uint256[]){
@@ -178,13 +224,85 @@ library ETicketTicketContext {
         require(ETicketTransaction.isCreatableTicketContextState(_transaction));
         require(ETicketTransaction.getRemainTickets(_transaction) >= _amount);
         uint256[] memory TicketContextIds = new uint256[](_amount); 
+        string _reservedUrl = "";
+        if (bytes(ETicketTransaction.getReserveOracleUrl(_transaction)).length != 0) {
+             // reservedUrl = oraclizeQuery();
+        }
         for (uint256 i = 0; i < _amount; i++) {
             var _serialNumber = ETicketTransaction.getAndIncrementSerialNumber(_transaction);
-            var _ticketContext = _new(_db, _user, _transaction, _serialNumber, TKTCTX_UNSALABLE);
+            var _ticketContext = _new(_db, _user, _transaction, _reservedUrl, _serialNumber, TKTCTX_UNSALABLE);
             _save(_ticketContext);
             TicketContextIds[i] = _ticketContext.ticketContextId;
         }
         return TicketContextIds;
+    }
+    
+    function transferTicketCtx(ETicketDB _db, uint256 _ticketContextId, uint256 newUserId) internal returns (bool) { 
+        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
+        var newUser = ETicketUser.getExistsUser(_db, newUserId);
+        require(isTransferableTicketContextState(_ticketContext));
+        _ticketContext.enterCode = getRandomCode(_ticketContext.ticketContextId);
+        _ticketContext.state = TKTCTX_UNSALABLE;
+        _ticketContext.userId = newUser.userId;
+        _ticketContext.user = newUser;
+        return _save(_ticketContext);
+    }
+    
+    function setTicketContextSalable(ETicketDB _db, uint256 _ticketContextId)  internal returns (bool) { 
+        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
+        require(isModifiableTicketContextState(_ticketContext));
+        require(_ticketContext.state.equalsState(TKTCTX_UNSALABLE));
+        require(bytes(_ticketContext.cashBackCode).length == 0);
+        _ticketContext.state = TKTCTX_SALABLE;
+        return _save(_ticketContext);
+    }
+    
+    function setTicketContextUnsalable(ETicketDB _db, uint256 _ticketContextId)  internal returns (bool) { 
+        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
+        require(isModifiableTicketContextState(_ticketContext));
+        require(_ticketContext.state.equalsState(TKTCTX_SALABLE));
+        _ticketContext.state = TKTCTX_UNSALABLE;
+        return _save(_ticketContext);
+    }
+    
+    function buyTicketContext(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId)  internal returns (bool) {
+        var _ticketContext = getExistsTicketContext(_ticketDB, _ticketContextId);
+        var _user = _ticketContext.user;
+        var _newUser = ETicketUser.getSenderUser(_ticketDB, targetUserId);
+        require(isSalableTicketContextState(_ticketContext));
+        require(bytes(_ticketContext.cashBackCode).length == 0);
+        _ticketContext.enterCode = getRandomCode(_ticketContext.ticketContextId);
+        _ticketContext.state = TKTCTX_UNSALABLE;
+        _ticketContext.userId = _newUser.userId;
+        _ticketContext.user = _newUser;
+        var _price = getTransactionPrice(_ticketContext); 
+        TokenDB(_tokenDB).addBalance(_user.userAddress, _price);
+        TokenDB(_tokenDB).subBalance(_newUser.userAddress, _price);
+        return _save(_ticketContext);
+    }
+
+    function enterTicketCtx() { 
+        // 入場記念処置イベンターがやる
+        // oraclizeでr入場記念URLを発行する、そのURLにアクセスすると素敵なことがあるようにできる
+        //　ゆずったり、売ったりできなくなる
+    }
+
+    function useCacheBack(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId, string cashBackCode) internal returns (bool) {
+        require(bytes(cashBackCode).length != 0);
+        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
+        require(isCashBackTicketContextState(_ticketContext));
+        require(bytes(_ticketContext.cashBackCode).length == 0);
+        var cashBackOracleUrl = ETicketTransaction.getCashBackOracleUrl(_transaction);
+        require(bytes(cashBackOracleUrl).length != 0);
+        _ticketContext.cashBackCode = cashBackCode;
+        _save(_ticketContext);
+        // XXX TODO oraclize
+    }
+    
+    
+
+    function refundTicketCtx() onlyOwnerUser() {
+        // stop後の払い戻し
     }
     
     
