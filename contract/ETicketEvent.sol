@@ -60,7 +60,7 @@ library ETicketEvent {
         ETicketUser.user user;
         // shadows
         uint256 __userId;
-        bytes32 __nameha3;
+        bytes32 __nameSha3;
         bytes32 __countrySha3;
         bytes32 __descriptionSha3;
         bytes32 __reserveOracleUrlSha3;
@@ -113,27 +113,27 @@ library ETicketEvent {
             ETicketDB(_userEvent.db).setUint256(sha3("events", _userEvent.eventId, "userId"), _userEvent.userId);
             changed = true;
         }
-        if (_userEvent.nameSha3 != 0 _userEvent.__nameSha3) {
+        if (_userEvent.nameSha3 != _userEvent.__nameSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "name"), _userEvent.name);
             changed = true;
         }
-        if (_userEvent.countrySha3 != 0 _userEvent.__countrySha3) {
+        if (_userEvent.countrySha3 != _userEvent.__countrySha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "country"), _userEvent.country);
             changed = true;
         }
-        if (_userEvent.descriptionSha3 != 0 _userEvent.__descriptionSha3) {
+        if (_userEvent.descriptionSha3 != _userEvent.__descriptionSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "description"), _userEvent.description);
             changed = true;
         }
-        if (_userEvent.reserveOracleUrlSha3 != 0 _userEvent.__reserveOracleUrlSha3) {
+        if (_userEvent.reserveOracleUrlSha3 != _userEvent.__reserveOracleUrlSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "reserveOracleUrl"), _userEvent.reserveOracleUrl);
             changed = true;
         }
-        if (_userEvent.enterOracleUrlSha3 != 0 _userEvent.__enterOracleUrlSha3) {
+        if (_userEvent.enterOracleUrlSha3 != _userEvent.__enterOracleUrlSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "enterOracleUrl"), _userEvent.enterOracleUrl);
             changed = true;
         }
-        if (_userEvent.cashbackOracleUrlSha3 != 0 _userEvent.__cashbackOracleUrlSha3) {
+        if (_userEvent.cashbackOracleUrlSha3 != _userEvent.__cashbackOracleUrlSha3) {
             ETicketDB(_userEvent.db).setString(sha3("events", _userEvent.eventId, "cashbackOracleUrl"), _userEvent.cashbackOracleUrl);
             changed = true;
         }
@@ -224,14 +224,22 @@ library ETicketEvent {
          return _userEvent.state.includesState(EVST_CREATE|EVST_SALE|EVST_OPEN|EVST_READY);
     }
 
+    function isCreatableTicketContextState(userEvent _userEvent) internal returns (bool) {
+         return _userEvent.state.includesState(EVST_OPEN|EVST_READY);
+    }
+
     function addAmountSold(userEvent _userEvent, uint256 _amountSold) internal returns (bool) {
-        _userEvent.amountSold = _userEvent.amountSold.add(_addAmountSold);
+        _userEvent.amountSold = _userEvent.amountSold.add(_amountSold);
         return true;
     }
 
     function subAmountSold(userEvent _userEvent, uint256 _amountSold) internal returns (bool) {
-        _userEvent.amountSold = _userEvent.amountSold.sub(_subAmountSold);
+        _userEvent.amountSold = _userEvent.amountSold.sub(_amountSold);
         return true;
+    }
+
+    function getEventUserId(userEvent _userEvent) internal returns (uint256) {
+        return _userEvent.userId;
     }
 
     function getExistsEvent(ETicketDB _db, uint256 _eventId) internal returns (userEvent) {
@@ -254,14 +262,14 @@ library ETicketEvent {
         string _enterOracleUrl,
         string _cashbackOracleUrl,
         uint32 _state
-        ) private returns (userEvent) {
+        ) private returns (uint256) {
         require(Validation.validStringLength(_name, 1, 200));        
         require(Validation.validStringLength(_country, 1, 3));        
         require(Validation.validStringLength(_description, 0, 15000)); 
         var _user = ETicketUser.getSenderUser(_db);
         var _userEvent = _new(_db, _user, _name, _country, _description, _reserveOracleUrl, _enterOracleUrl, _cashbackOracleUrl, _state);
         _save(_userEvent);
-        return _userEvent;        
+        return _userEvent.eventId;        
     }
     
     function createEventWithSalable(
@@ -272,7 +280,7 @@ library ETicketEvent {
         string _reserveOracleUrl,
         string _enterOracleUrl,
         string _cashbackOracleUrl
-        ) internal returns (userEvent) {
+        ) internal returns (uint256) {
         return createEventCommon(_db, _name, _country, _description, _reserveOracleUrl, _enterOracleUrl, _cashbackOracleUrl, EVST_SALE);
     }
 
@@ -284,7 +292,7 @@ library ETicketEvent {
         string _reserveOracleUrl,
         string _enterOracleUrl,
         string _cashbackOracleUrl
-        ) internal returns (userEvent) {
+        ) internal returns (uint256) {
         return createEventCommon(_db, _name, _country, _description, _reserveOracleUrl, _enterOracleUrl, _cashbackOracleUrl, EVST_CREATE);
     }
 

@@ -28,14 +28,13 @@ library ETicketTicketGroup {
     // == related ==
     // events <eventId> state [ 0x01 CREATE, 0x02 SALE, 0x04 OPEN, 0x08 READY,  0x10 STOP, 0x20 CLOSE, 0x40 COLLECT ]
 
-    uint32 constant TGST_UNSALABLE = 0x01;
-    uint32 constant TGST_SALABLE   = 0x02;
+    uint32 constant TGST_SALABLE   = 0x01;
+    uint32 constant TGST_UNSALABLE = 0x02;
 
     struct ticketGroup {
-        EticketDB _db;
+        ETicketDB db;
         uint256 ticketGroupId;
         // members
-        uint256 userId;
         uint256 eventId;
         string name;
         bytes32 nameSha3;
@@ -48,9 +47,8 @@ library ETicketTicketGroup {
         uint256 lastSerialNumber;
         uint32 state;
         // parent
-        ETicketEvent.userEvent userEvent
+        ETicketEvent.userEvent userEvent;
         // shadows
-        uint256 __userId;
         uint256 __eventId;
         bytes32 __nameSha3;
         bytes32 __descriptionSha3;
@@ -60,7 +58,6 @@ library ETicketTicketGroup {
         uint256 __price;
         uint256 __lastSerialNumber;
         uint32 __state;
-        uint256 __transactionupdateTime;
     }
     
     function _newId(ETicketDB _db) private returns (uint256) {
@@ -69,8 +66,7 @@ library ETicketTicketGroup {
 
     function _load(ETicketDB _db, uint256 _ticketGroupId) private returns (ticketGroup _ticketGroup) {
         _ticketGroup.db = _db;
-        _ticketGroup._ticketGroupId = _ticketGroupId;
-        _ticketGroup.userId = ETicketDB(_db).getUint256(sha3("ticketGroups", _ticketGroupId, "userId"));
+        _ticketGroup.ticketGroupId = _ticketGroupId;
         _ticketGroup.eventId = ETicketDB(_db).getUint256(sha3("ticketGroups", _ticketGroupId, "eventId"));
         // not supported string
         _ticketGroup.nameSha3 = ETicketDB(_db).getStringSha3(sha3("ticketGroups", _ticketGroupId, "name")); 
@@ -82,7 +78,6 @@ library ETicketTicketGroup {
         _ticketGroup.lastSerialNumber = ETicketDB(_db).getUint256(sha3("ticketGroups", _ticketGroupId, "lastSerialNumber")); 
         _ticketGroup.state = ETicketDB(_db).getUint32(sha3("ticketGroups", _ticketGroupId, "state")); 
        // set shadows
-        _ticketGroup.__userId = _ticketGroup.userId;
         _ticketGroup.__eventId = _ticketGroup.eventId;
         _ticketGroup.__supplyTickets = _ticketGroup.supplyTickets;
         _ticketGroup.__soldTickets = _ticketGroup.soldTickets;
@@ -90,7 +85,6 @@ library ETicketTicketGroup {
         _ticketGroup.__price = _ticketGroup.price;
         _ticketGroup.__lastSerialNumber = _ticketGroup.lastSerialNumber;
         _ticketGroup.__state = _ticketGroup.state;
-        _ticketGroup.__transactionupdateTime = _ticketGroup.transactionupdateTime;
          require(_ticketGroup.state != 0);
         // parent
         _ticketGroup.userEvent = ETicketEvent.getExistsEvent(_db, _ticketGroup.eventId);
@@ -98,10 +92,6 @@ library ETicketTicketGroup {
 
     function _save(ticketGroup _ticketGroup) private returns (bool){
         bool changed = false;
-        if (_ticketGroup.userId != _ticketGroup.__userId) {
-            ETicketDB(_ticketGroup.db).setUint256(sha3("ticketGroups", _ticketGroup.ticketGroupId, "userId"), _ticketGroup.userId);
-            changed = true;
-        }
         if (_ticketGroup.eventId != _ticketGroup.__eventId) {
             ETicketDB(_ticketGroup.db).setUint256(sha3("ticketGroups", _ticketGroup.ticketGroupId, "eventId"), _ticketGroup.eventId);
             changed = true;
@@ -153,12 +143,11 @@ library ETicketTicketGroup {
         string _description,
         uint256 _supplyTickets,
         uint256 _maxPrice,
-        uint256 _price
-        uint32 _state,
+        uint256 _price,
+        uint32 _state
         ) private returns (ticketGroup _ticketGroup) {
         _ticketGroup.db = _db;
         _ticketGroup.ticketGroupId = _newId(_db);
-        _ticketGroup.userId = _userEvent.user.userId;
         _ticketGroup.eventId = _userEvent.eventId;
         _ticketGroup.name = _name;
         _ticketGroup.nameSha3 = sha3(_name);
@@ -176,38 +165,48 @@ library ETicketTicketGroup {
         return _save(_ticketGroup);
     }
 
-    function isSalableTicketGroupState(ticketGroup _ticketGroup) returns (bool) {
-        return _ticketGroup.state.equalsState(TGST_SALABLE) && ETicketEvent.isSalableTicketState(_ticketGroup.userEvent); 
+    function isSalableTicketGroupState(ticketGroup _ticketGroup) internal returns (bool) {
+        return _ticketGroup.state.equalsState(TGST_SALABLE) && ETicketEvent.isSalableTicketGroupState(_ticketGroup.userEvent); 
     }
 
     function isModiableTransactionState(ticketGroup _ticketGroup) internal returns (bool) {
-        return ETicketEvent.isModiableTransactionState(ticketGroup.userEvent);
+        return ETicketEvent.isModiableTransactionState(_ticketGroup.userEvent);
     }
 
     function isCancelableTransactionState(ticketGroup _ticketGroup) internal returns (bool) {
-        return ETicketEvent.isCancelableTransactionState(ticketGroup.userEvent);
+        return ETicketEvent.isCancelableTransactionState(_ticketGroup.userEvent);
     }
 
     function isSalableTransactionState(ticketGroup _ticketGroup) internal returns (bool) {
         return ETicketEvent.isSalableTransactionState(_ticketGroup.userEvent);
     }
 
-    function addSoldTicket(ticketGroup _ticketGroup, _amount) internal returns (bool) {
+    function isCreatableTicketContextState(ticketGroup _ticketGroup) internal returns (bool) {
+        return ETicketEvent.isCreatableTicketContextState(_ticketGroup.userEvent);
+    }
+
+    function getAndIncrementSerialNumbertransaction(ticketGroup _ticketGroup) internal returns (uint256) {
+        var serialNumber = _ticketGroup.lastSerialNumber;
+        _ticketGroup.lastSerialNumber = _ticketGroup.lastSerialNumber.add(1);
+        return serialNumber;
+    }
+
+    function addSoldTicket(ticketGroup _ticketGroup, uint256 _amount) internal returns (bool) {
         _ticketGroup.soldTickets = _ticketGroup.soldTickets.add(_amount);
         return true;
     }
     
-    function subSoldTicket(ticketGroup _ticketGroup, _amount) internal returns (bool) {
+    function subSoldTicket(ticketGroup _ticketGroup, uint256 _amount) internal returns (bool) {
         _ticketGroup.soldTickets = _ticketGroup.soldTickets.sub(_amount);
         return true;
     }
 
-    function addAmountSold(ticketGroup _ticketGroup, _totalPrice) internal returns (bool) {
+    function addAmountSold(ticketGroup _ticketGroup, uint256 _totalPrice) internal returns (bool) {
         ETicketEvent.addAmountSold(_ticketGroup.userEvent, _totalPrice); 
         return true;
     }
     
-    function subAmountSold(ticketGroup _ticketGroup, _totalPrice) internal returns (bool) {
+    function subAmountSold(ticketGroup _ticketGroup, uint256 _totalPrice) internal returns (bool) {
         ETicketEvent.subAmountSold(_ticketGroup.userEvent, _totalPrice); 
         return true;
     }
@@ -217,7 +216,7 @@ library ETicketTicketGroup {
     }
 
     function getSalableTickets(ticketGroup _ticketGroup) internal returns (uint256) {
-        return ticketGroup.supplyTickets.sub(ticketGroup.soldTickets);
+        return _ticketGroup.supplyTickets.sub(_ticketGroup.soldTickets);
     }
 
     function getExistsTicketGroup(ETicketDB _db, uint256 _ticketGroupId) internal returns (ticketGroup) {
@@ -227,8 +226,8 @@ library ETicketTicketGroup {
     function getSenderTicketGroup(ETicketDB _db, uint256 _ticketGroupId) internal returns (ticketGroup) {
         var _user = ETicketUser.getSenderUser(_db);
         var _ticketGroup =  _load(_db, _ticketGroupId);
-        require(_ticketGroup.userId != _user.userId);
-        return _ticketGroup
+        require(ETicketEvent.getEventUserId(_ticketGroup.userEvent) != _user.userId);
+        return _ticketGroup;
     }
 
     function createTicketGroupCommon(
@@ -240,7 +239,7 @@ library ETicketTicketGroup {
         uint256 _maxPrice,
         uint256 _price,
         uint32 _state
-        ) private returns (ticketGroup _ticketGroup) {
+        ) private returns (uint256) {
         require(Validation.validStringLength(_name, 1, 100));        
         require(Validation.validStringLength(_description, 1, 3000));
         require(_maxPrice >= _price);
@@ -248,7 +247,7 @@ library ETicketTicketGroup {
         require(ETicketEvent.isCreatableAndModiableTicketGroupState(_userEvent));
         var _ticketGroup = _new(_db, _userEvent, _name, _description, _supplyTickets, _maxPrice, _price, _state);
         _save(_ticketGroup);
-        return _ticketGroup;
+        return _ticketGroup.ticketGroupId;
     }
 
     function createTicketGroupWithSalable(
@@ -259,7 +258,7 @@ library ETicketTicketGroup {
         uint256 _supplyTickets,
         uint256 _maxPrice,
         uint256 _price
-        ) internal returns (uint256 _ticketGroupId) {
+        ) internal returns (uint256) {
         return createTicketGroupCommon(_db, _eventId, _name, _description, _supplyTickets, _maxPrice, _price, TGST_SALABLE);
     }
     
@@ -271,7 +270,7 @@ library ETicketTicketGroup {
         uint256 _supplyTickets,
         uint256 _maxPrice,
         uint256 _price
-        ) returns (uint256 _ticketGroupId) {
+        ) returns (uint256) {
         return createTicketGroupCommon(_db, _eventId, _name, _description, _supplyTickets, _maxPrice, _price, TGST_UNSALABLE);
     }
 
@@ -323,7 +322,7 @@ library ETicketTicketGroup {
         var _ticketGroup = getSenderTicketGroup(_db, _ticketGroupId);
         require(ETicketEvent.isCreatableAndModiableTicketGroupState(_ticketGroup.userEvent));
         require(_ticketGroup.maxPrice >= _price);
-        _ticketGroup.price = price;
+        _ticketGroup.price = _price;
         return _save(_ticketGroup);
     }
 

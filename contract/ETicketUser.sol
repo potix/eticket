@@ -114,10 +114,6 @@ library ETicketUser {
         return _save(_user);
     }
 
-    function getSenderUserId() internal returns (uint256) {
-        return ETicketDB(_ticketDB).getIdMap(msg.sender);
-    }
-    
     function getExistsUser(ETicketDB _db, uint256 _userId) internal returns(user) {
         var _user = _load(_db, _userId);
         return _user;
@@ -125,7 +121,7 @@ library ETicketUser {
     
     function getSenderUser(ETicketDB _db) internal returns(user) {
         require(Validation.validAddress(msg.sender));
-        var _userId = getSenderUserId();
+        var _userId = ETicketDB(_db).getIdMap(msg.sender);
         var _user = _load(_db, _userId);
         require(msg.sender == _user.userAddress);  
         return _user;
@@ -136,7 +132,7 @@ library ETicketUser {
         string _name, 
         string _email, 
         string _profile
-        ) internal returns (user) {
+        ) internal returns (uint256) {
         require(Validation.validAddress(msg.sender));
         require(Validation.validStringLength(_name, 1, 100));        
         require(Validation.validStringLength(_email, 0, 100));        
@@ -144,7 +140,7 @@ library ETicketUser {
         var _user = _new(_db, _name, _email, _profile);
         _save(_user);
         ETicketDB(_db).setIdMap(msg.sender, _user.userId);
-        return _user;        
+        return _user.userId;        
     }
 
     function setUserName(ETicketDB _db, string _name) internal returns (bool) {
