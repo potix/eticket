@@ -314,7 +314,7 @@ library ETicketTicketContext {
         return _save(_ticketContext);
     }
 
-    function enterTicketCtx(ETicketDB _db, uint256 _ticketContextId) internal returns (bool) { 
+    function enterTicketContext(ETicketDB _db, uint256 _ticketContextId) internal returns (bool) { 
         var _ticketContext = getExistsTicketContext(_db, _ticketContextId);
         require(isEnterableTicketContextState(_ticketContext));
         var eventOwnerUser = getEventOwnerUser(_ticketContext);
@@ -328,21 +328,22 @@ library ETicketTicketContext {
         return _save(_ticketContext);
     }
 
-    function useCacheBack(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId, string cashBackCode) internal returns (bool) {
-        require(bytes(cashBackCode).length != 0);
+    function cashBackTicketContext(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId, string _cashBackCode) internal returns (bool) {
+        require(bytes(_cashBackCode).length != 0);
         var _ticketContext = getSenderTicketContext(_ticketDB, _ticketContextId);
         require(isCashBackTicketContextState(_ticketContext));
         require(bytes(_ticketContext.cashBackCode).length == 0);
         var cashBackOracleUrl = getCashBackOracleUrl(_ticketContext);
         require(bytes(cashBackOracleUrl).length != 0);
-        _ticketContext.cashBackCode = cashBackCode;
+        _ticketContext.cashBackCode = _cashBackCode;
         // XXX TODO oraclize
         // token移動
+        // addTotalCashBack(cashBackPrice)
         // TokenDB(_tokenDB).addBalance(_ticketContext.user.userAddress, cashBackPrice);
         return _save(_ticketContext);
     }
 
-    function refundTicketCtx(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId) internal returns (bool) {
+    function refundTicketContext(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId) internal returns (bool) {
         var _ticketContext = getSenderTicketContext(_ticketDB, _ticketContextId);
         require(isRefundableTicketContextState(_ticketContext));
         var _buyPrice = getTransactionBuyPrice(_ticketContext);     

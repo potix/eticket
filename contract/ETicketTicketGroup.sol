@@ -338,20 +338,20 @@ library ETicketTicketGroup {
         return _save(_ticketGroup);
     }
 
-    function addTicketGroupSupplyTickets(ETicketDB _db, uint256 _ticketGroupId, uint256 _addSupplyTickets) internal returns (bool) {
-        require(_addSupplyTickets > 0);
+    function addTicketGroupSupplyTickets(ETicketDB _db, uint256 _ticketGroupId, uint256 _supplyTickets) internal returns (bool) {
+        require(_supplyTickets > 0);
         var _ticketGroup = getSenderTicketGroup(_db, _ticketGroupId);
         require(isCreatableAndModiableTicketGroupState(_ticketGroup));
-        _ticketGroup.supplyTickets = _ticketGroup.supplyTickets.add(_addSupplyTickets);
+        _ticketGroup.supplyTickets = _ticketGroup.supplyTickets.add(_supplyTickets);
         return _save(_ticketGroup);
     }
 
-    function subTicketGroupSupplyTickets(ETicketDB _db, uint256 _ticketGroupId, uint256 _subSupplyTickets) internal returns (bool) {
-        require(_subSupplyTickets > 0);
+    function subTicketGroupSupplyTickets(ETicketDB _db, uint256 _ticketGroupId, uint256 _supplyTickets) internal returns (bool) {
+        require(_supplyTickets > 0);
         var _ticketGroup = getSenderTicketGroup(_db, _ticketGroupId);
         require(isCreatableAndModiableTicketGroupState(_ticketGroup));
-        require(getSalableTickets(_ticketGroup) >= _subSupplyTickets);
-        _ticketGroup.supplyTickets = _ticketGroup.supplyTickets.sub(_subSupplyTickets);
+        require(getSalableTickets(_ticketGroup) >= _supplyTickets);
+        _ticketGroup.supplyTickets = _ticketGroup.supplyTickets.sub(_supplyTickets);
         return _save(_ticketGroup);
     }
     
@@ -372,7 +372,7 @@ library ETicketTicketGroup {
         return _save(_ticketGroup);
     }
 
-    function startTicketGroupSalable(ETicketDB _db, uint256 _ticketGroupId) internal returns (bool) {
+    function setTicketGroupSalable(ETicketDB _db, uint256 _ticketGroupId) internal returns (bool) {
         var _ticketGroup = getSenderTicketGroup(_db, _ticketGroupId);
         require(isCreatableAndModiableTicketGroupState(_ticketGroup));
         require(_ticketGroup.state.equalsState(TGST_UNSALABLE));
@@ -380,7 +380,7 @@ library ETicketTicketGroup {
         return _save(_ticketGroup);
     }
     
-    function stopTicketGroupUnsalable(ETicketDB _db, uint256 _ticketGroupId) internal returns (bool) {
+    function setTicketGroupUnsalable(ETicketDB _db, uint256 _ticketGroupId) internal returns (bool) {
         var _ticketGroup = getSenderTicketGroup(_db, _ticketGroupId);
         require(isCreatableAndModiableTicketGroupState(_ticketGroup));
         require(_ticketGroup.state.equalsState(TGST_SALABLE));
@@ -388,5 +388,6 @@ library ETicketTicketGroup {
         return _save(_ticketGroup);
     }
 }
+
 
 

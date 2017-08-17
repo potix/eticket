@@ -270,7 +270,7 @@ library ETicketTransaction {
         return _transaction;
     }
     
-    function createTransaction(
+    function buyTransaction(
         ETicketDB _ticketDB, 
         TokenDB _tokenDB, 
         uint256 _ticketGroupId, 
@@ -306,7 +306,7 @@ library ETicketTransaction {
         return _save(_transaction);
     }
 
-    function buyTransaction(
+    function buyTransactionFromBuyer(
         ETicketDB _ticketDB, 
         TokenDB _tokenDB, 
         uint256 _transactionId, 

@@ -2,8 +2,8 @@ pragma solidity ^0.4.14;
 
 import "./TokenInterface.sol";
 import "./ContractAllowable.sol";
-import "./TokenDB.sol";
 import "./Converter.sol";
+import "./TokenDB.sol";
 
 contract Token is ERC20Interface, TokenInterface, ContractAllowable {
     address public tokenDB;
@@ -202,5 +202,6 @@ contract Token is ERC20Interface, TokenInterface, ContractAllowable {
         return true;
     }
 }
+
 
 
