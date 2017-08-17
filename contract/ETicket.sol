@@ -139,35 +139,35 @@ contract ETicket is ETicketInterface, Token {
         return ETicketTicketGroup.createTicketGroupWithUnsalable(ETicketDB(ticketDB), _eventId, _name, _description, _supplyTickets, _maxPrice, _price);
     }
     
-    function setTicketGroupName(uint256 _eventId, uint256 _ticketGroupId, string _name) returns (bool) {
+    function setTicketGroupName(uint256 _ticketGroupId, string _name) returns (bool) {
         return ETicketTicketGroup.setTicketGroupName(ETicketDB(ticketDB), _ticketGroupId, _name);
     }
     
-    function setTicketGroupDescription(uint256 _eventId, uint256 _ticketGroupId, string _description) returns (bool) {
+    function setTicketGroupDescription(uint256 _ticketGroupId, string _description) returns (bool) {
         return ETicketTicketGroup.setTicketGroupDescription(ETicketDB(ticketDB), _ticketGroupId, _description);
     }
 
-    function addTicketGroupSupplyTickets(uint256 _eventId, uint256 _ticketGroupId,  uint256 _supplyTickets) returns (bool) {
+    function addTicketGroupSupplyTickets(uint256 _ticketGroupId,  uint256 _supplyTickets) returns (bool) {
         return ETicketTicketGroup.addTicketGroupSupplyTickets(ETicketDB(ticketDB), _ticketGroupId, _supplyTickets);
     }
 
-    function subTicketGroupSupplyTickets(uint256 _eventId, uint256 _ticketGroupId, uint256 _supplyTickets) returns (bool) {
+    function subTicketGroupSupplyTickets(uint256 _ticketGroupId, uint256 _supplyTickets) returns (bool) {
         return ETicketTicketGroup.subTicketGroupSupplyTickets(ETicketDB(ticketDB), _ticketGroupId, _supplyTickets);
     }
 
-    function setTicketGroupMaxPrice(uint256 _eventId, uint256 _ticketGroupId, uint256 _maxPrice) returns (bool) {
+    function setTicketGroupMaxPrice(uint256 _ticketGroupId, uint256 _maxPrice) returns (bool) {
         return ETicketTicketGroup.setTicketGroupMaxPrice(ETicketDB(ticketDB), _ticketGroupId, _maxPrice);
     }
 
-    function setTicketGroupPrice(uint256 _eventId, uint256 _ticketGroupId, uint256 _price)  returns (bool) {
+    function setTicketGroupPrice(uint256 _ticketGroupId, uint256 _price)  returns (bool) {
         return ETicketTicketGroup.setTicketGroupPrice(ETicketDB(ticketDB), _ticketGroupId, _price);
     }
 
-    function setTicketGroupSalable(uint256 _eventId, uint256 _ticketGroupId) returns (bool) {
+    function setTicketGroupSalable(uint256 _ticketGroupId) returns (bool) {
         return ETicketTicketGroup.setTicketGroupSalable(ETicketDB(ticketDB), _ticketGroupId);
     }
     
-    function setTicketGroupUnsalable(uint256 _eventId, uint256 _ticketGroupId) returns (bool) {
+    function setTicketGroupUnsalable(uint256 _ticketGroupId) returns (bool) {
         return ETicketTicketGroup.setTicketGroupUnsalable(ETicketDB(ticketDB), _ticketGroupId);
     }
 
