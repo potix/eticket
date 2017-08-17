@@ -170,7 +170,8 @@ library ETicketTicketGroup {
     }
 
     function isSalableTicketGroupState(ticketGroup _ticketGroup) internal returns (bool) {
-        return _ticketGroup.state.equalsState(TGST_SALABLE) && ETicketEvent.isSalableTicketGroupState(_ticketGroup.userEvent); 
+        return _ticketGroup.state.equalsState(TGST_SALABLE) && 
+               ETicketEvent.isSalableTicketGroupState(_ticketGroup.userEvent); 
     }
 
     function isModifiableTransactionState(ticketGroup _ticketGroup) internal returns (bool) {
@@ -205,6 +206,14 @@ library ETicketTicketGroup {
          return ETicketEvent.isCashBackTicketContextState(_ticketGroup.userEvent);
     }
 
+    function isEnterableTicketContextState(ticketGroup _ticketGroup) internal returns (bool) {
+         return ETicketEvent.isEnterableTicketContextState(_ticketGroup.userEvent);
+    }
+    
+    function isRefundableTicketContextState(ticketGroup _ticketGroup) internal returns (bool) {
+         return ETicketEvent.isRefundableTicketContextState(_ticketGroup.userEvent);
+    }
+    
     function addSoldTicket(ticketGroup _ticketGroup, uint256 _amount) internal returns (bool) {
         _ticketGroup.soldTickets = _ticketGroup.soldTickets.add(_amount);
         return true;
@@ -235,6 +244,14 @@ library ETicketTicketGroup {
         return ETicketEvent.getReserveOracleUrl(_ticketGroup.userEvent);
     }
 
+    function getEnterOracleUrl(ticketGroup _ticketGroup) internal returns (string) {
+        return ETicketEvent.getEnterOracleUrl(_ticketGroup.userEvent);
+    }
+
+    function getCashBackOracleUrl(ticketGroup _ticketGroup) internal returns (string) {
+        return ETicketEvent.getCashBackOracleUrl(_ticketGroup.userEvent);
+    }
+
     function getTicketGroupTotalPrice(ticketGroup _ticketGroup, uint256 _amount) internal returns (uint256) {
         return _ticketGroup.price.mul(_amount);
     }
@@ -242,7 +259,11 @@ library ETicketTicketGroup {
     function getSalableTickets(ticketGroup _ticketGroup) internal returns (uint256) {
         return _ticketGroup.supplyTickets.sub(_ticketGroup.soldTickets);
     }
-
+    
+    function getEventOwnerUser(ticketGroup _ticketGroup) internal returns (ETicketUser.user) {
+        return ETicketEvent.getEventOwnerUser(_ticketGroup.userEvent);
+    }
+    
     function getExistsTicketGroup(ETicketDB _db, uint256 _ticketGroupId) internal returns (ticketGroup) {
         return _load(_db, _ticketGroupId);
     }
@@ -250,7 +271,8 @@ library ETicketTicketGroup {
     function getSenderTicketGroup(ETicketDB _db, uint256 _ticketGroupId) internal returns (ticketGroup) {
         var _user = ETicketUser.getSenderUser(_db);
         var _ticketGroup =  _load(_db, _ticketGroupId);
-        require(ETicketEvent.getEventUserId(_ticketGroup.userEvent) != _user.userId);
+        var _eventOwneUser = ETicketEvent.getEventOwnerUser(_ticketGroup.userEvent);
+        require(_eventOwneUser.userId != _user.userId);
         return _ticketGroup;
     }
 

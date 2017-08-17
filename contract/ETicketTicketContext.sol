@@ -27,7 +27,7 @@ library ETicketTicketContext {
     // ticketContexts <ticketContextId> serialNumber
     // ticketContexts <ticketContextId> BuyPrice
     // ticketContexts <ticketContextId> salePrice
-    // ticketContexts <ticketContextId> state [ 0x01 SALABLE, 0x02 UNSALABLE, 0x04 ENTERED ]
+    // ticketContexts <ticketContextId> state [ 0x01 SALABLE, 0x02 UNSALABLE, 0x04 ENTERED, 0x08 REFUNDED ]
     // == related == 
     // [transaction]
     // transactions <ticketContextId> buyTickets
@@ -42,6 +42,7 @@ library ETicketTicketContext {
     uint32 constant TKTCTX_SALABLE    = 0x01;
     uint32 constant TKTCTX_UNSALABLE  = 0x02;
     uint32 constant TKTCTX_ENTERED    = 0x04;
+    uint32 constant TKTCTX_REFUNDED   = 0x08;
 
     struct ticketContext {
         ETicketDB db;
@@ -183,23 +184,53 @@ library ETicketTicketContext {
     }
     
     function isModifiableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
-        return ETicketTransaction.isModifiableTicketContextState(_ticketContext.transaction);
+        return _ticketContext.state.includesState(TKTCTX_SALABLE|TKTCTX_UNSALABLE) && 
+               ETicketTransaction.isModifiableTicketContextState(_ticketContext.transaction);
     }
     
     function isTransferableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
-        return _ticketContext.state.includesState(TKTCTX_SALABLE|TKTCTX_UNSALABLE) && ETicketTransaction.isTransferableTicketContextState(_ticketContext.transaction)
+        return _ticketContext.state.includesState(TKTCTX_SALABLE|TKTCTX_UNSALABLE) && 
+               ETicketTransaction.isTransferableTicketContextState(_ticketContext.transaction);
     }
     
     function isSalableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
-        return _ticketContext.state.equalsState(TKTCTX_SALABLE) && ETicketTransaction.isSalableTicketContextState(_ticketContext.transaction);
+        return _ticketContext.state.equalsState(TKTCTX_SALABLE) && 
+               ETicketTransaction.isSalableTicketContextState(_ticketContext.transaction);
     }
     
     function isCashBackTicketContextState(ticketContext _ticketContext) internal returns (bool) {
-        return ETicketTransaction.isCashBackTicketContextState(_ticketContext.transaction);
+        return _ticketContext.state.includesState(TKTCTX_SALABLE|TKTCTX_UNSALABLE|TKTCTX_ENTERED) &&
+               ETicketTransaction.isCashBackTicketContextState(_ticketContext.transaction);
     }
     
-    function getTransactionPrice(ticketContext _ticketContext) internal returns (uint256) {
-        return ETicketTransaction.getTransactionPrice(_ticketContext.transaction); 
+    function isEnterableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
+        return _ticketContext.state.includesState(TKTCTX_SALABLE|TKTCTX_UNSALABLE) && 
+               ETicketTransaction.isEnterableTicketContextState(_ticketContext.transaction);
+    }
+
+    function isRefundableTicketContextState(ticketContext _ticketContext) internal returns (bool) {
+        return _ticketContext.state.includesState(TKTCTX_SALABLE|TKTCTX_UNSALABLE|TKTCTX_ENTERED) && 
+               ETicketTransaction.isRefundableTicketContextState(_ticketContext.transaction);
+    }
+
+    function getEnterOracleUrl(ticketContext _ticketContext) internal returns (string) {
+        return ETicketTransaction.getEnterOracleUrl(_ticketContext.transaction);
+    }
+
+    function getCashBackOracleUrl(ticketContext _ticketContext) internal returns (string) {
+        return ETicketTransaction.getCashBackOracleUrl(_ticketContext.transaction);
+    }
+    
+    function getTransactionBuyPrice(ticketContext _ticketContext) internal returns (uint256) {
+        return ETicketTransaction.getTransactionBuyPrice(_ticketContext.transaction); 
+    }
+    
+    function getEventOwnerUser(ticketContext _ticketContext) internal returns (ETicketUser.user) {
+        return ETicketTransaction.getEventOwnerUser(_ticketContext.transaction); 
+    }
+    
+    function subAmountSold(ticketContext _ticketContext, uint256 _totalPrice) internal returns (bool) {
+        return ETicketTransaction.subAmountSold(_ticketContext.transaction, _totalPrice); 
     }
     
     function getExistsTicketContext(ETicketDB _db, uint256 _ticketContextId) internal returns(ticketContext) {
@@ -214,7 +245,8 @@ library ETicketTicketContext {
     }
     
     function __callback(bytes32 myid, string result) internal {
-        if (!validIds[myid]) throw;
+        //mapping(bytes32=>bool) validIds;
+        //if (!validIds[myid]) throw;
     }
     
     function createTicketcontext(ETicketDB _db, uint256 _transactionId, uint256 _amount) internal returns (uint256[]){
@@ -224,9 +256,10 @@ library ETicketTicketContext {
         require(ETicketTransaction.isCreatableTicketContextState(_transaction));
         require(ETicketTransaction.getRemainTickets(_transaction) >= _amount);
         uint256[] memory TicketContextIds = new uint256[](_amount); 
-        string _reservedUrl = "";
-        if (bytes(ETicketTransaction.getReserveOracleUrl(_transaction)).length != 0) {
-             // reservedUrl = oraclizeQuery();
+        var _reserveOracleUrl = ETicketTransaction.getReserveOracleUrl(_transaction);
+        var _reservedUrl = "";
+        if (bytes(_reserveOracleUrl).length != 0) {
+            // XXX TODO oraclize
         }
         for (uint256 i = 0; i < _amount; i++) {
             var _serialNumber = ETicketTransaction.getAndIncrementSerialNumber(_transaction);
@@ -238,74 +271,86 @@ library ETicketTicketContext {
     }
     
     function transferTicketCtx(ETicketDB _db, uint256 _ticketContextId, uint256 newUserId) internal returns (bool) { 
-        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
-        var newUser = ETicketUser.getExistsUser(_db, newUserId);
+        var _ticketContext = getSenderTicketContext(_db, _ticketContextId);
+        var _newUser = ETicketUser.getExistsUser(_db, newUserId);
         require(isTransferableTicketContextState(_ticketContext));
         _ticketContext.enterCode = getRandomCode(_ticketContext.ticketContextId);
         _ticketContext.state = TKTCTX_UNSALABLE;
-        _ticketContext.userId = newUser.userId;
-        _ticketContext.user = newUser;
+        _ticketContext.userId = _newUser.userId;
+        _ticketContext.user = _newUser;
         return _save(_ticketContext);
     }
     
-    function setTicketContextSalable(ETicketDB _db, uint256 _ticketContextId)  internal returns (bool) { 
-        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
+    function setTicketContextSalable(ETicketDB _db, uint256 _ticketContextId) internal returns (bool) { 
+        var _ticketContext = getSenderTicketContext(_db, _ticketContextId);
         require(isModifiableTicketContextState(_ticketContext));
         require(_ticketContext.state.equalsState(TKTCTX_UNSALABLE));
         require(bytes(_ticketContext.cashBackCode).length == 0);
-        _ticketContext.state = TKTCTX_SALABLE;
+        _ticketContext.state = _ticketContext.state.changeState(TKTCTX_UNSALABLE, TKTCTX_SALABLE);
         return _save(_ticketContext);
     }
     
-    function setTicketContextUnsalable(ETicketDB _db, uint256 _ticketContextId)  internal returns (bool) { 
-        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
+    function setTicketContextUnsalable(ETicketDB _db, uint256 _ticketContextId) internal returns (bool) { 
+        var _ticketContext = getSenderTicketContext(_db, _ticketContextId);
         require(isModifiableTicketContextState(_ticketContext));
         require(_ticketContext.state.equalsState(TKTCTX_SALABLE));
-        _ticketContext.state = TKTCTX_UNSALABLE;
+        _ticketContext.state = _ticketContext.state.changeState(TKTCTX_SALABLE, TKTCTX_UNSALABLE);
         return _save(_ticketContext);
     }
     
-    function buyTicketContext(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId)  internal returns (bool) {
+    function buyTicketContext(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId) internal returns (bool) {
         var _ticketContext = getExistsTicketContext(_ticketDB, _ticketContextId);
         var _user = _ticketContext.user;
-        var _newUser = ETicketUser.getSenderUser(_ticketDB, targetUserId);
+        var _newUser = ETicketUser.getSenderUser(_ticketDB);
         require(isSalableTicketContextState(_ticketContext));
         require(bytes(_ticketContext.cashBackCode).length == 0);
         _ticketContext.enterCode = getRandomCode(_ticketContext.ticketContextId);
         _ticketContext.state = TKTCTX_UNSALABLE;
         _ticketContext.userId = _newUser.userId;
         _ticketContext.user = _newUser;
-        var _price = getTransactionPrice(_ticketContext); 
-        TokenDB(_tokenDB).addBalance(_user.userAddress, _price);
-        TokenDB(_tokenDB).subBalance(_newUser.userAddress, _price);
+        var _buyPrice = getTransactionBuyPrice(_ticketContext); 
+        TokenDB(_tokenDB).addBalance(_user.userAddress, _buyPrice);
+        TokenDB(_tokenDB).subBalance(_newUser.userAddress, _buyPrice);
         return _save(_ticketContext);
     }
 
-    function enterTicketCtx() { 
-        // 入場記念処置イベンターがやる
-        // oraclizeでr入場記念URLを発行する、そのURLにアクセスすると素敵なことがあるようにできる
-        //　ゆずったり、売ったりできなくなる
+    function enterTicketCtx(ETicketDB _db, uint256 _ticketContextId) internal returns (bool) { 
+        var _ticketContext = getExistsTicketContext(_db, _ticketContextId);
+        require(isEnterableTicketContextState(_ticketContext));
+        var eventOwnerUser = getEventOwnerUser(_ticketContext);
+        require(msg.sender == eventOwnerUser.userAddress);
+        _ticketContext.state = _ticketContext.state.changeState((TKTCTX_SALABLE|TKTCTX_UNSALABLE), TKTCTX_ENTERED);
+        var _enterOracleUrl = getEnterOracleUrl(_ticketContext);
+        var _enteredUrl = "";
+        if (bytes(_enterOracleUrl).length != 0) {
+            // XXX TODO oraclize
+        }
+        return _save(_ticketContext);
     }
 
     function useCacheBack(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId, string cashBackCode) internal returns (bool) {
         require(bytes(cashBackCode).length != 0);
-        var ticketContext = getSenderTicketContext(_db, _ticketContextId);
+        var _ticketContext = getSenderTicketContext(_ticketDB, _ticketContextId);
         require(isCashBackTicketContextState(_ticketContext));
         require(bytes(_ticketContext.cashBackCode).length == 0);
-        var cashBackOracleUrl = ETicketTransaction.getCashBackOracleUrl(_transaction);
+        var cashBackOracleUrl = getCashBackOracleUrl(_ticketContext);
         require(bytes(cashBackOracleUrl).length != 0);
         _ticketContext.cashBackCode = cashBackCode;
-        _save(_ticketContext);
         // XXX TODO oraclize
+        // token移動
+        // TokenDB(_tokenDB).addBalance(_ticketContext.user.userAddress, cashBackPrice);
+        return _save(_ticketContext);
     }
-    
-    
 
-    function refundTicketCtx() onlyOwnerUser() {
-        // stop後の払い戻し
+    function refundTicketCtx(ETicketDB _ticketDB, TokenDB _tokenDB, uint256 _ticketContextId) internal returns (bool) {
+        var _ticketContext = getSenderTicketContext(_ticketDB, _ticketContextId);
+        require(isRefundableTicketContextState(_ticketContext));
+        var _buyPrice = getTransactionBuyPrice(_ticketContext);     
+        var _totalPrice = _buyPrice.sub(_ticketContext.cashBackAmount);
+        _ticketContext.state = _ticketContext.state.changeState(TKTCTX_SALABLE|TKTCTX_SALABLE|TKTCTX_ENTERED, TKTCTX_REFUNDED);
+        subAmountSold(_ticketContext, _totalPrice);
+        TokenDB(_tokenDB).addBalance(_ticketContext.user.userAddress, _totalPrice);
+        return _save(_ticketContext);
     }
-    
-    
-    
 }
 

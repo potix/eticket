@@ -174,11 +174,12 @@ library ETicketTransaction {
     }
     
     function isModifiableTransactionState(transaction _transaction) internal returns (bool) {
-        return ETicketTicketGroup.isModifiableTransactionState(_transaction.ticketGroup)
+        return ETicketTicketGroup.isModifiableTransactionState(_transaction.ticketGroup);
     }
     
     function isSalableTransactionState(transaction _transaction) internal returns (bool) {
-        return _transaction.state.equalsState(TXNST_SALABLE) && ETicketTicketGroup.isSalableTransactionState(_transaction.ticketGroup);
+        return _transaction.state.equalsState(TXNST_SALABLE) && 
+               ETicketTicketGroup.isSalableTransactionState(_transaction.ticketGroup);
     }
 
     function isCancelableTransactionState(transaction _transaction) internal returns (bool) {
@@ -204,13 +205,33 @@ library ETicketTransaction {
     function isCashBackTicketContextState(transaction _transaction) internal returns (bool) {
         return ETicketTicketGroup.isCashBackTicketContextState(_transaction.ticketGroup);
     }
+    
+    function isEnterableTicketContextState(transaction _transaction) internal returns (bool) {
+        return ETicketTicketGroup.isEnterableTicketContextState(_transaction.ticketGroup);
+    }
+
+    function isRefundableTicketContextState(transaction _transaction) internal returns (bool) {
+        return ETicketTicketGroup.isRefundableTicketContextState(_transaction.ticketGroup);
+    }
 
     function getAndIncrementSerialNumber(transaction _transaction) internal returns (uint256) {
         return ETicketTicketGroup.getAndIncrementSerialNumbertransaction(_transaction.ticketGroup);
     }
+    
+    function getReserveOracleUrl(transaction _transaction) internal returns (string) {
+        return  ETicketTicketGroup.getReserveOracleUrl(_transaction.ticketGroup);
+    }
 
-    function getTransactionPrice(transaction _transaction) internal returns (uint256) {
-        return _transaction.price;
+    function getEnterOracleUrl(transaction _transaction) internal returns (string) {
+        return  ETicketTicketGroup.getEnterOracleUrl(_transaction.ticketGroup);
+    }
+
+    function getCashBackOracleUrl(transaction _transaction) internal returns (string) {
+        return  ETicketTicketGroup.getCashBackOracleUrl(_transaction.ticketGroup);
+    }
+
+    function getTransactionBuyPrice(transaction _transaction) internal returns (uint256) {
+        return _transaction.buyPrice;
     }
 
     function getTransactionTotalPrice(transaction _transaction, uint256 _amount) internal returns (uint256) {
@@ -220,14 +241,22 @@ library ETicketTransaction {
     function getRemainTickets(transaction _transaction) internal returns (uint256) {
         return _transaction.buyTickets.sub(_transaction.reservedTickets);
     }
-    
-    function getReserveOracleUrl(transaction _transaction) internal returns (string) {
-        return  ETicketTicketGroup.getReserveOracleUrl(_transaction.ticketGroup);
+
+    function getEventOwnerUser(transaction _transaction) internal returns (ETicketUser.user) {
+        return ETicketTicketGroup.getEventOwnerUser(_transaction.ticketGroup);
     }
 
     function subBuyTickets(transaction _transaction, uint256 _amount) internal returns (bool) {
         _transaction.buyTickets = _transaction.buyTickets.sub(_amount);
         return true;
+    }
+    
+    function subSoldTicket(transaction _transaction, uint256 _amount) internal returns (bool) {
+        return ETicketTicketGroup.subSoldTicket(_transaction.ticketGroup, _amount); 
+    }
+    
+    function subAmountSold(transaction _transaction, uint256 _totalPrice) internal returns (bool) {
+        return ETicketTicketGroup.subAmountSold(_transaction.ticketGroup, _totalPrice); 
     }
     
     function getExistsTransaction(ETicketDB _db, uint256 _transactionId) internal returns(transaction) {
@@ -263,7 +292,7 @@ library ETicketTransaction {
 
     function setTransactionSalable(ETicketDB _db, uint256 _transactionId) internal returns (bool) {
         var _transaction = getSenderTransaction(_db, _transactionId);
-        require(isModifiableTransactionState(_transaction.ticketGroup));
+        require(isModifiableTransactionState(_transaction));
         require(_transaction.state.equalsState(TXNST_UNSALABLE));
         _transaction.state = _transaction.state.changeState(TXNST_UNSALABLE, TXNST_SALABLE);
         return _save(_transaction);
@@ -271,7 +300,7 @@ library ETicketTransaction {
 
     function setTransactionUnsalable(ETicketDB _db, uint256 _transactionId) internal returns (bool) {
         var _transaction = getSenderTransaction(_db, _transactionId);
-        require(isModifiableTransactionState(_transaction.ticketGroup));
+        require(isModifiableTransactionState(_transaction));
         require(_transaction.state.equalsState(TXNST_SALABLE));
         _transaction.state = _transaction.state.changeState(TXNST_SALABLE, TXNST_UNSALABLE);
         return _save(_transaction);
@@ -310,8 +339,8 @@ library ETicketTransaction {
         require(getRemainTickets(_transaction) >= _amount);
         var _totalPrice = getTransactionTotalPrice(_transaction, _amount);
         subBuyTickets(_transaction, _amount);
-        ETicketTicketGroup.subSoldTicket(_transaction.ticketGroup, _amount);       
-        ETicketTicketGroup.subAmountSold(_transaction.ticketGroup, _totalPrice);
+        subSoldTicket(_transaction, _amount);       
+        subAmountSold(_transaction, _totalPrice);
         TokenDB(_tokenDB).addBalance(msg.sender, _totalPrice);
         return _save(_transaction);
     }
